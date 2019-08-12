@@ -8,7 +8,7 @@ import scipy.integrate
 air_density = 1.2 # kg / m^3 
 
 # pretty close for our temperatures and height above sea level
-water_density = 998.0 # kg / m^3
+water_density = 1000.0 # kg / m^3
 
 class Ballistic:
     def __init__(self, position, velocity, t0, dry_mass, C_drag, A_cross_sectional_area, timestep = 0.001):
@@ -77,6 +77,7 @@ class BoostScienceBits:
                  pressure, # in kPa relative to outside pressure
                  dry_mass, volume, # in liter, total volume
                  C_drag, A_cross_sectional_area, nozzle_radius, # in meters
+                 rail_length = 0.0, # launch rails that keep it upright. gravity then work 
                  timestep = 0.001):
         # (mass and pressure are vectors in case I want to use scipy integrators)
         mass = dry_mass + water/1000 * water_density # 1l = 0.001m^3
@@ -93,6 +94,7 @@ class BoostScienceBits:
         self.nozzle_radius = nozzle_radius
         self.nozzle_area = pi*self.nozzle_radius**2
         self.gamma = 1.4 # adiabatic constant for dry air
+        self.rail_length = rail_length
 
 
     def position(self):
@@ -118,7 +120,16 @@ class BoostScienceBits:
         direction = 1/sqrt(speed2) * velocity # vector
 
         a_drag = - 1/(2*mass) * self.C_drag * self.A_cross_sectional_area * speed2 * direction
-        a_grav = -np.array([0, 9.81])
+
+        # while it's on the rail, just get the component of gravity backwards along the rail
+        distance_from_origin = sqrt(sum(self.position() * self.position()))
+        if distance_from_origin > self.rail_length:
+            a_grav = -np.array([0, 9.81])
+        else:
+            a_grav = np.dot(-np.array([0, 9.81]), direction) * direction
+
+        # print(f"{distance_from_origin} => gravity = {a_grav} ({sqrt(sum(a_grav*a_grav))}), direction = {direction}")
+
         # Assumption: It thrusts in the same direction as it's flying. 
         # It points in the direction that it's pointing. 
         # I.e. aerodynamically stable and perfectly responsive.
@@ -211,3 +222,46 @@ class BoostWheeler:
             Return: t, position, velocity, water (l), pressure(kPa)
             """
             pass
+
+    
+class Stepper:
+
+    def __init__(self, print_interval=0.01):
+        self.t_time = []
+        self.t_position = []
+        self.t_velocity = []
+        self.print_interval = print_interval
+        self.cur_interval: int = 0
+    
+
+    def step(self, phase):
+        """
+        Step until the rocket hits the floor or the phase returns None.
+        """
+
+        altitude = phase.position()[1]
+
+        while altitude > 0.0:
+            # print(phase.state)
+
+            ret = phase.step()
+            if ret is None:
+                # water's run out
+                break
+
+            time, position, velocity = ret
+            altitude = position[1]
+
+            interval = int(time/self.print_interval)
+            if interval > self.cur_interval:
+                print(f'{time:0.04f}: {position}, {velocity}')    
+                self.cur_interval = interval
+
+            self.t_time.append(time)
+            self.t_position.append(position)
+            self.t_velocity.append(velocity)
+
+        self.count = 0
+
+    def get_traces(self):
+        return np.array(self.t_time), np.array(self.t_position), np.array(self.t_velocity)

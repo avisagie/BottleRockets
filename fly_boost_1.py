@@ -1,22 +1,25 @@
 import numpy as np
 from numpy import sin, cos, sqrt, pi
-from rocket import Ballistic, BoostScienceBits
+from rocket import Stepper, Ballistic, BoostScienceBits
 from util import *
 
 from matplotlib import pylab
 
 timestep = 0.001
 radius = 0.05
-C_drag = 1.0
-dry_mass = 0.1
-water_l = 0.66
-pressure = 2.5331 - 1.0 # relative pressure
-volume = 2.0
+C_drag = 0.3
+dry_mass = 0.2
+volume = 2
+water_l = volume / 5
+pressure = 9 - 1.0 # relative pressure
 nozzle_radius = 0.01
+theta = 45 # degrees
+
 
 def trajectory(theta, timestep, radius, C_drag, dry_mass):
 
-    trace = []
+    stepper = Stepper()
+
     position = np.array([0, 0.1])
     altitude = position[1]
     count = 0
@@ -33,67 +36,46 @@ def trajectory(theta, timestep, radius, C_drag, dry_mass):
                                 C_drag=C_drag, 
                                 A_cross_sectional_area=pi*radius**2, 
                                 nozzle_radius=nozzle_radius, 
+                                rail_length=1.5,
                                 timestep=timestep)
 
-    while altitude > 0.0:
-        # print(phase.state)
+    stepper.step(phase)
 
-        ret = phase.step()
-        if ret is None:
-            # water's run out
-            break
-
-        time, position, velocity = ret
-        altitude = position[1]
-
-        t = np.append(position, [sqrt(sum(velocity * velocity)), time])
-        trace.append(t)
-        max_altitude = max(max_altitude, altitude)
-
-        count += 1
-        if count*timestep >= 0.001:
-            print(f'{time:0.04f}: {position}, {velocity}')    
-            count = 0
-
-
-    phase = Ballistic(position, velocity, phase.t,
+    phase = Ballistic(phase.position(), phase.velocity(), phase.t,
                     dry_mass=dry_mass, 
                     C_drag=C_drag,
                     A_cross_sectional_area=pi * (radius**2),
                     timestep=timestep)
 
+    stepper.step(phase)
 
-    # while the y coordinate is above ground
-    while altitude >= 0:
-        time, position, velocity = phase.step()
-        altitude = position[1]
+    return stepper.get_traces()
 
-        t = np.append(position, [sqrt(sum(velocity * velocity)), time])
-        trace.append(t)
-        max_altitude = max(max_altitude, altitude)
 
-        count += 1
-        if count*timestep > 0.1:
-            print(f'{time:0.04f}: {position}, {velocity}')    
-            count = 0
+traces = trajectory(theta, timestep=timestep, radius=radius, C_drag=C_drag, dry_mass=dry_mass)
+time, position, velocity = traces
+speed = sqrt(np.sum(velocity * velocity, axis=1))
+max_speed = max(speed)
 
-    flight_time = time
-    print(f'{time:0.04f}: {position}, {velocity}')    
-    print(f'Flight time: {flight_time}, Max altitude: {max_altitude}')
+print(position)
 
-    return np.array(trace)
+ax1 = pylab.subplot(211)
+ax1.plot(time, position[:, 1], 'b')
+ax1.set_ylabel("Height (m)", color='b')
+ax2 = ax1.twinx()
+ax2.plot(time, speed, 'r')
+ax2.set_ylabel("Speed (m/s)", color='r')
+ax1.grid()
+ax1.set_title(f"Distance and speed (max height:{np.max(position[:,1]):0.1f}m, distance:{np.max(position[:,0]):0.0f}m, "
+                + f"max speed:{max_speed:0.0f}m/s, {ms2kmh(max_speed):0.0f}km/h)")
+ax1.set_xlabel("Time (s)")
 
-pylab.title(f"Trajectories at various launch angles")
+ax1 = pylab.subplot(212)
+ax1.plot(position[:, 0], position[:, 1], 'b')
+ax1.set_ylabel("Height (m)", color='b')
+ax1.grid()
+ax1.set_xlabel("Distance (m)")
 
-angles = [35, 40, 45, 55, 65, 75, 90]
-for theta in [90]:
-    trace = trajectory(theta, timestep=timestep, radius=radius, C_drag=C_drag, dry_mass=dry_mass)
-    pylab.plot(trace[:,3], trace[:,1])
-    pylab.plot(trace[:,3], trace[:,2])
-
-pylab.grid()
-pylab.xlabel("Distance from origin (m)")
-pylab.ylabel("Height (m)")
 pylab.show()
 
 

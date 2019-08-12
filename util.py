@@ -2,10 +2,10 @@
 from numpy import pi
 
 def kmh2ms(kmh):
-    return kmh  * (1000/3600)
+    return kmh * 1000 / 3600
 
 def ms2kmh(ms):
-    return ms  / (1000*3600)
+    return ms / 1000 * 3600
 
 def rad2deg(rad):
     return rad/(2*pi)*360
