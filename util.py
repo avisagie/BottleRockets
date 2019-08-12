@@ -12,3 +12,6 @@ def rad2deg(rad):
 
 def deg2rad(deg):
     return deg / 360 * 2 * pi
+
+def bar2pa(bar):
+    return bar * 100000.0

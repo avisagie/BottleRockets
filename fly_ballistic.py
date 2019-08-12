@@ -29,7 +29,9 @@ def trajectory(speed, theta, timestep, radius, C_drag, dry_mass):
     while altitude >= 0:
         time, position, velocity = phase.step()
         altitude = position[1]
-        trace.append(position)
+
+        t = np.append(position, sqrt(sum(velocity * velocity)))
+        trace.append(t)
         max_altitude = max(max_altitude, altitude)
 
         count += 1
@@ -43,7 +45,7 @@ def trajectory(speed, theta, timestep, radius, C_drag, dry_mass):
 
     return np.array(trace)
 
-pylab.title(f"Trajectories")
+pylab.title(f"Trajectories at various launch angles")
 
 angles = [35, 40, 45, 55, 65, 75, 90]
 for theta in angles:
