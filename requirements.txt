@@ -29,6 +29,7 @@ numpy==1.17.0
 pandocfilters==1.4.2
 parso==0.5.1
 pickleshare==0.7.5
+Pint==0.9
 prometheus-client==0.7.1
 prompt-toolkit==2.0.9
 pycodestyle==2.5.0
