@@ -5,16 +5,17 @@ from util import *
 
 from matplotlib import pylab
 
-timestep = 0.001
-radius = 0.05
+radius = 0.045
 C_drag = 0.3
-dry_mass = 0.2
-volume = 2
-water_l = volume / 5
-pressure = 9 - 1.0 # relative pressure
-nozzle_radius = 0.01
+dry_mass = 0.5
+volume = 8
+water_l = volume / 3
+pressure = 10 # relative pressure
+nozzle_radius = 0.0075
+
 theta = 45 # degrees
 
+timestep = 0.001
 
 def trajectory(theta, timestep, radius, C_drag, dry_mass):
 
@@ -53,9 +54,10 @@ def trajectory(theta, timestep, radius, C_drag, dry_mass):
 
 
 traces = trajectory(theta, timestep=timestep, radius=radius, C_drag=C_drag, dry_mass=dry_mass)
-time, position, velocity = traces
+time, position, velocity, acceleration = traces
 speed = sqrt(np.sum(velocity * velocity, axis=1))
 max_speed = max(speed)
+max_acceleration = max(sqrt(np.sum(acceleration * acceleration, axis=1)))
 
 print(position)
 
@@ -66,8 +68,9 @@ ax2 = ax1.twinx()
 ax2.plot(time, speed, 'r')
 ax2.set_ylabel("Speed (m/s)", color='r')
 ax1.grid()
-ax1.set_title(f"Distance and speed (max height:{np.max(position[:,1]):0.1f}m, distance:{np.max(position[:,0]):0.0f}m, "
-                + f"max speed:{max_speed:0.0f}m/s, {ms2kmh(max_speed):0.0f}km/h)")
+ax1.set_title(f"Distance:{np.max(position[:,0]):0.0f}m, flight time:{max(time):0.01f}s")
+print(f"Distance and speed (max height:{np.max(position[:,1]):0.1f}m, distance:{np.max(position[:,0]):0.0f}m, "
++ f"max speed:{max_speed:0.0f}m/s, {ms2kmh(max_speed):0.0f}km/h), acceleration:{max_acceleration/9.81:0.0f}g")
 ax1.set_xlabel("Time (s)")
 
 ax1 = pylab.subplot(212)
