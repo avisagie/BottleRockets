@@ -10,6 +10,7 @@ Experiments in bottle rocket simulations.
 1. `cd BottleRockets`
 1. `virtualenv virt`
 1. `virt\Scripts\activate.bat`
+1. `pip install -r requirements.txt`
 1. `python -u fly.py`
 
 Then check out fly.py, edit it with new parameters and have fun!
