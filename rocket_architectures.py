@@ -138,8 +138,7 @@ def sim1(
     return stepper.get_traces()
 
 
-if __name__ == "__main__":
-    traces = sim1() # sim_3_boosters()
+def plot_basic(traces):
     time, position, velocity, acceleration = traces
     speed = sqrt(np.sum(velocity * velocity, axis=1))
     accel = sqrt(np.sum(acceleration * acceleration, axis=1)) / 9.81 # in Gs
@@ -149,21 +148,24 @@ if __name__ == "__main__":
     print(position)
 
     ax1 = pylab.subplot(211)
-    ax1.plot(position[:, 0], accel, 'b')
+    ax1.plot(time, accel, 'b')
     ax1.set_ylabel("Acceleration (g)", color='b')
     ax2 = ax1.twinx()
-    ax2.plot(position[:, 0], speed, 'r')
+    ax2.plot(time, speed, 'r')
     ax2.set_ylabel("Speed (m/s)", color='r')
     ax1.grid()
     ax1.set_title(f"Distance:{np.max(position[:,0]):0.0f}m, flight time:{max(time):0.01f}s")
-    print(f"Distance and speed (max height:{np.max(position[:,1]):0.1f}m, distance:{np.max(position[:,0]):0.0f}m, "
-    + f"max speed:{max_speed:0.0f}m/s, {ms2kmh(max_speed):0.0f}km/h), acceleration:{max_acceleration/9.81:0.0f}g")
-    ax1.set_xlabel("Distance (s)")
+    ax1.set_xlabel("Flight time (s)")
 
     ax1 = pylab.subplot(212)
     ax1.plot(position[:, 0], position[:, 1], 'b')
     ax1.set_ylabel("Height (m)", color='b')
     ax1.grid()
-    ax1.set_xlabel("Distance (m)")
+    ax1.set_xlabel("Horizontal distance (m)")
 
     pylab.show()
+
+
+if __name__ == "__main__":
+    traces = sim_3_boosters()
+    plot_basic(traces)
