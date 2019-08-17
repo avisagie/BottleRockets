@@ -178,7 +178,7 @@ class RocketWithComponents:
     Boost phase from science bits: http://www.sciencebits.com/RocketEqs 
     """
 
-    def __init__(self, position, velocity, t0,
+    def __init__(self, position, origin, velocity, t0,
                  components,
                  rail_length = 0.0,
                  validate = Callable[[], bool], # tell if this system holds together
@@ -190,6 +190,7 @@ class RocketWithComponents:
         self.acceleration = 0.0
         self.components = components
         self.rail_length = rail_length
+        self.origin = origin
 
         self.validate = validate
 
@@ -226,17 +227,21 @@ class RocketWithComponents:
 
         F_drag = self.F_drag(speed2)
 
+        distance_from_origin = sqrt(sum((self.origin - self.position()) * (self.origin - self.position())))
+
+        # while it's on the rail, just get the component of gravity backwards along the rail
+        if distance_from_origin > self.rail_length:
+            a_grav = -np.array([0, 9.81])
+            for c in self.components: c.launch_tube_phase(distance_from_origin)
+        else:
+            a_grav = np.dot(-np.array([0, 9.81]), direction) * direction
+            for c in self.components: c.launch_tube_phase(distance_from_origin)
+
+
         # Assumption: It thrusts in the same direction as it's flying. 
         # It points in the direction that it's pointing. 
         # I.e. aerodynamically stable and perfectly responsive.
         F_thrust = self.F_thrust()
-
-        # while it's on the rail, just get the component of gravity backwards along the rail
-        distance_from_origin = sqrt(sum(self.position() * self.position()))
-        if distance_from_origin > self.rail_length:
-            a_grav = -np.array([0, 9.81])
-        else:
-            a_grav = np.dot(-np.array([0, 9.81]), direction) * direction
 
         mass = self.mass()
 
@@ -272,6 +277,9 @@ class RocketWithComponents:
         if not self.components:
             return None
 
+        if not self.validate():
+            raise Exception("It broke apart")
+
         return self.t, self.position(), self.velocity()
 
 
@@ -287,6 +295,7 @@ class BoosterScienceBits:
                  pressure, # in kPa relative to outside pressure
                  dry_mass, volume, # in liter, total volume
                  C_drag, A_cross_sectional_area, nozzle_radius, # in meters
+                 launch_tube_length = 0.0, # m. Assumes that the launch tube fits snuggly and has no friction
                  timestep = 0.001):
         # (mass and pressure are vectors in case I want to use scipy integrators)
         mass = dry_mass + water/1000 * water_density # 1l = 0.001m^3
@@ -294,15 +303,20 @@ class BoosterScienceBits:
         self.t = t0
         self.dry_mass = dry_mass
         self.mass_0 = mass
+        self.nozzle_radius = nozzle_radius
+        self.nozzle_area = pi*self.nozzle_radius**2
         self.volume = volume / 1000 # total volume in m^3, 1l = 0.001m^3
-        self.volume_0 = self.volume - water/1000 # air volume at t0
+        self.volume_0 = self.volume - water/1000 - self.nozzle_area*launch_tube_length # air volume at t0
         self.pressure_0 = pressure
         self.C_drag = C_drag
         self.A_cross_sectional_area = A_cross_sectional_area
         self.timestep = timestep
-        self.nozzle_radius = nozzle_radius
-        self.nozzle_area = pi*self.nozzle_radius**2
         self.gamma = 1.4 # adiabatic constant for dry air
+
+        self.launch_tube_length = launch_tube_length
+        self.distance_from_origin = 0.0
+
+        self.in_launch_tube_phase = True
 
 
     def position(self):
@@ -319,13 +333,24 @@ class BoosterScienceBits:
 
     def F_thrust(self):
         pressure = self.state[1, 0]
-        return 2*self.nozzle_area * pressure
+        if self.in_launch_tube_phase:
+            return self.nozzle_area * pressure # https://www.et.byu.edu/~wheeler/benchtop/pix/thrust_eqns.pdf Section III
+        else:
+            return 2 * self.nozzle_area * pressure
 
     
     def mass(self):
         mass = self.state[0, 0]
         return mass
 
+
+    def launch_tube_phase(self, distance_from_origin):
+        in_launch_tube_phase = distance_from_origin < self.launch_tube_length
+        if self.in_launch_tube_phase and not in_launch_tube_phase:
+            print(f"Distance:{distance_from_origin}, time:{self.t:0.001}s, off the launch tube.")
+        self.in_launch_tube_phase = in_launch_tube_phase
+        self.distance_from_origin = distance_from_origin
+        
 
     def fun(self):
         """
@@ -335,7 +360,12 @@ class BoosterScienceBits:
 
         pressure = self.state[1, 0]
         mass = self.state[0, 0]
-        dmdt = - self.nozzle_area * water_density * sqrt(2 * pressure / water_density)
+        if self.in_launch_tube_phase:
+            # assuming water loss during the launch tube phase is negligible. 
+            # TODO model this. The nozzle area consists of the ring around the launch tube.
+            dmdt = 0 
+        else:
+            dmdt = - self.nozzle_area * water_density * sqrt(2 * pressure / water_density)
 
         return np.array([[dmdt], [0]])
 
@@ -346,10 +376,12 @@ class BoosterScienceBits:
         Return: t, position, velocity or None if the water's run out
         """
 
-        # update pressure here.
-
+        # Update pressure here. TODO rewrite the equation to fit in fun.
         mass = self.mass()
-        self.state[1, 0] = self.pressure_0 * ( (self.volume_0 + (self.mass_0 - mass)/water_density) / self.volume_0 ) ** -self.gamma
+        water_volume_lost = (self.mass_0 - mass)/water_density
+        launch_pipe_volume_lost = self.launch_tube_length * self.nozzle_area * max(0.0, self.launch_tube_length - self.distance_from_origin)
+        # print (f'Volume Lost: water={1000*water_volume_lost:0.03f}l, launch pipe:{1000*launch_pipe_volume_lost:0.03f}l')
+        self.state[1, 0] = self.pressure_0 * ( (self.volume_0 + water_volume_lost + launch_pipe_volume_lost) / self.volume_0 ) ** -self.gamma
 
         next_state = self.state + self.timestep * self.fun()
 
@@ -393,7 +425,7 @@ class Stepper:
 
             interval = int(time/self.print_interval)
             if interval > self.cur_interval:
-                print(f'{time:0.04f}: {position}, {velocity}')    
+                print(f'{time:0.03f}s: position:{position}, velocity:{velocity}')    
                 self.cur_interval = interval
 
             self.t_time.append(time)

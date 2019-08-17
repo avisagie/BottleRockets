@@ -38,7 +38,7 @@ def trajectory(theta, timestep, radius, C_drag, dry_mass):
                                 A_cross_sectional_area=pi*radius**2, 
                                 nozzle_radius=nozzle_radius, 
                                 rail_length=1.5,
-                                timestep=timestep)
+                                timestep=timestep  )
 
     stepper.step(phase)
 
