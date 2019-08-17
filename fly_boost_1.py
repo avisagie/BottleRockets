@@ -9,11 +9,11 @@ radius = 0.045
 C_drag = 0.3
 dry_mass = 0.5
 volume = 8
-water_l = volume / 3
+water_l = 8.0 / 3
 pressure = 10 # relative pressure
-nozzle_radius = 0.0075
+nozzle_radius = 0.0105
 
-theta = 45 # degrees
+theta = 40 # degrees
 
 timestep = 0.001
 

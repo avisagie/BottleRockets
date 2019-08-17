@@ -100,6 +100,8 @@ class BoostScienceBits:
         self.gamma = 1.4 # adiabatic constant for dry air
         self.rail_length = rail_length
 
+        self.origin = position
+
         self.acceleration = 0.0
 
 
@@ -132,8 +134,10 @@ class BoostScienceBits:
         # I.e. aerodynamically stable and perfectly responsive.
         F_thrust = 2*self.nozzle_area * pressure
 
+        # print(f'{self.t:0.03f}s: {F_thrust}N, {F_drag}N, {mass}kg')
+
         # while it's on the rail, just get the component of gravity backwards along the rail
-        distance_from_origin = sqrt(sum(self.position() * self.position()))
+        distance_from_origin = sqrt(sum((self.origin-self.position()) * (self.origin - self.position())))
         if distance_from_origin > self.rail_length:
             a_grav = -np.array([0, 9.81])
         else:
@@ -159,7 +163,9 @@ class BoostScienceBits:
         # update pressure here.
 
         mass = self.state[2][0]
-        self.state[3][0] = self.pressure_0 * ( (self.volume_0 + (self.mass_0 - mass)/water_density) / self.volume_0 ) ** -self.gamma
+        water_volume_lost = (self.mass_0 - mass)/water_density
+        # print(f'Volume lost: water={1000*water_volume_lost:0.3f}l')
+        next_pressure = self.pressure_0 * ( (self.volume_0 + water_volume_lost) / self.volume_0 ) ** -self.gamma
 
         next_state = self.state + self.timestep * self.fun() 
         next_mass = next_state[2][0]
@@ -167,6 +173,7 @@ class BoostScienceBits:
             return None
 
         self.state = next_state
+        self.state[3][0] = next_pressure
         self.t += self.timestep
 
         return self.t, self.position(), self.velocity()
@@ -175,13 +182,13 @@ class BoostScienceBits:
 class RocketWithComponents:
 
     """
-    Boost phase from science bits: http://www.sciencebits.com/RocketEqs 
+    Boost phase that sheds components when they are spent (step returns None)
     """
 
     def __init__(self, position, origin, velocity, t0,
                  components,
                  rail_length = 0.0,
-                 validate = Callable[[], bool], # tell if this system holds together
+                 validate: Callable[[], bool] = lambda: True, # tell if this system holds together
                  timestep = 0.001):
         # (mass and pressure are vectors in case I want to use scipy integrators)
         self.state = np.array([position, velocity]) 
@@ -245,6 +252,8 @@ class RocketWithComponents:
 
         mass = self.mass()
 
+        # print(f'{self.t:0.03f}s: {F_thrust}, {F_drag}, {mass}kg')
+
         a_thrust = 1/mass * F_thrust * direction
         a_drag = 1/mass * F_drag * -direction
         dvdt = a_drag + a_grav + a_thrust
@@ -271,7 +280,7 @@ class RocketWithComponents:
                 done.append(c)
 
         for d in done:
-            print(f"    removing {d} from a list of {len(self.components)} components")
+            print(f"Removing {d} from a list of {len(self.components)} components")
             self.components.remove(d)
 
         if not self.components:
@@ -313,10 +322,10 @@ class BoosterScienceBits:
         self.timestep = timestep
         self.gamma = 1.4 # adiabatic constant for dry air
 
-        self.launch_tube_length = launch_tube_length
+        self.launch_tube_length = max(0.0, launch_tube_length)
         self.distance_from_origin = 0.0
 
-        self.in_launch_tube_phase = True
+        self.in_launch_tube_phase = launch_tube_length > 0.0
 
 
     def position(self):
@@ -347,7 +356,7 @@ class BoosterScienceBits:
     def launch_tube_phase(self, distance_from_origin):
         in_launch_tube_phase = distance_from_origin < self.launch_tube_length
         if self.in_launch_tube_phase and not in_launch_tube_phase:
-            print(f"Distance:{distance_from_origin}, time:{self.t:0.001}s, off the launch tube.")
+            print(f"Distance:{distance_from_origin}, time:{self.t:0.03f}s, off the launch tube.")
         self.in_launch_tube_phase = in_launch_tube_phase
         self.distance_from_origin = distance_from_origin
         
