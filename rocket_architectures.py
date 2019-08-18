@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import sin, cos, sqrt, pi
-from rocket import Stepper, Ballistic, BoosterScienceBits, RocketWithComponents
+from rocket import Stepper, Ballistic, BoosterScienceBits, RocketWithComponents, water_density
 from util import *
 from itertools import chain
 
@@ -71,6 +71,95 @@ def sim_3_boosters(
         components=list(chain(boosters, [center])), 
         rail_length=rail_length, 
         validate=validate, 
+        timestep=timestep  
+    )
+
+    stepper.step(phase)
+
+    phase = Ballistic(phase.position(), phase.velocity(), phase.t,
+                    dry_mass=dry_mass, 
+                    C_drag=C_drag,
+                    A_cross_sectional_area=pi * (radius**2),
+                    timestep=timestep)
+
+    stepper.step(phase)
+
+    return stepper.get_traces()
+
+
+def sim_3_boosters_bullet(
+    radius = 0.045,
+    C_drag = 0.3,
+    dry_mass = 0.3,
+    volume = 3,
+    water_l = 3.0 / 3,
+    pressure = 10, # relative pressure
+    nozzle_radius = 0.0105,
+    launch_tube_length = 0.0, # m, must add equations for pushing back on the first stage and the origin to not be fixed. For now make it 0.
+
+    booster_radius = 0.045,
+    booster_C_drag = 0.5,
+    booster_dry_mass = 0.6,
+    booster_volume = 8,
+    booster_water_l = 8.0 / 3,
+    booster_nozzle_radius = 0.0105,
+    booster_launch_tube_length = 1.0, # m
+
+    theta = 45, # degrees
+    rail_length = 1.5, # m
+
+    timestep = 0.001
+    ):
+
+    """
+    Simulate a 3 booster first stage with a small streamlined "bullet". The bullet is a 
+    smaller water rocket that starts the moment the first stage stops accelerating.
+    """
+
+    stepper = Stepper()
+
+    position = np.array([0, 0.1])
+    
+    bullet_mass = dry_mass + water_l/1000 * water_density
+    print(f'Bullet starting mass: {bullet_mass:0.01f}kg')
+
+    boosters = [BoosterScienceBits( t0=0, 
+                                    water=booster_water_l,
+                                    pressure=bar2pa(pressure), 
+                                    dry_mass=booster_dry_mass + 1.0/3.0*bullet_mass, 
+                                    volume=booster_volume, 
+                                    C_drag=booster_C_drag, 
+                                    A_cross_sectional_area=pi*booster_radius**2, 
+                                    nozzle_radius=booster_nozzle_radius, 
+                                    launch_tube_length=booster_launch_tube_length,
+                                    timestep=timestep) for x in range(3)]
+
+    phase = RocketWithComponents(position, position, 0.001*np.array([cos(deg2rad(theta)), sin(deg2rad(theta))]), 0.0, 
+        components=boosters, 
+        rail_length=rail_length, 
+        timestep=timestep  
+    )
+
+    stepper.step(phase)
+
+    position = phase.position()
+    velocity = phase.velocity()
+    time = phase.t
+
+    bullet = BoosterScienceBits( t0=0, 
+                                 water=water_l,
+                                 pressure=bar2pa(pressure), 
+                                 dry_mass=dry_mass, 
+                                 volume=volume, 
+                                 C_drag=C_drag, 
+                                 A_cross_sectional_area=pi*radius**2, 
+                                 nozzle_radius=nozzle_radius, 
+                                 launch_tube_length=launch_tube_length,
+                                 timestep=timestep )
+
+    phase = RocketWithComponents(position, position, velocity, time, 
+        components=[bullet], 
+        rail_length=0.0, 
         timestep=timestep  
     )
 
@@ -167,5 +256,5 @@ def plot_basic(traces):
 
 
 if __name__ == "__main__":
-    traces = sim_3_boosters()
+    traces = sim_3_boosters_bullet()
     plot_basic(traces)
