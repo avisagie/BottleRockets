@@ -1,3 +1,4 @@
 virt
 .vscode
 __pycache__/
+venv
