@@ -11,6 +11,8 @@ air_density = 1.2 # kg / m^3
 # pretty close for our temperatures and height above sea level
 water_density = 1000.0 # kg / m^3
 
+verbose = True
+
 class Ballistic:
     def __init__(self, position, velocity, t0, dry_mass, C_drag, A_cross_sectional_area, timestep = 0.001):
         """
@@ -280,7 +282,7 @@ class RocketWithComponents:
                 done.append(c)
 
         for d in done:
-            print(f"Removing {d} from a list of {len(self.components)} components")
+            if verbose: print(f"Removing {d} from a list of {len(self.components)} components")
             self.components.remove(d)
 
         if not self.components:
@@ -356,7 +358,7 @@ class BoosterScienceBits:
     def launch_tube_phase(self, distance_from_origin):
         in_launch_tube_phase = distance_from_origin < self.launch_tube_length
         if self.in_launch_tube_phase and not in_launch_tube_phase:
-            print(f"Distance:{distance_from_origin}, time:{self.t:0.03f}s, off the launch tube.")
+            if verbose: print(f"Distance:{distance_from_origin}, time:{self.t:0.03f}s, off the launch tube.")
         self.in_launch_tube_phase = in_launch_tube_phase
         self.distance_from_origin = distance_from_origin
         
@@ -434,7 +436,7 @@ class Stepper:
 
             interval = int(time/self.print_interval)
             if interval > self.cur_interval:
-                print(f'{time:0.03f}s: position:{position}, velocity:{velocity}')    
+                if verbose: print(f'{time:0.03f}s: position:{position}, velocity:{velocity}')    
                 self.cur_interval = interval
 
             self.t_time.append(time)
