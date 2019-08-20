@@ -95,7 +95,7 @@ class Minion:
 
 class GeneticAlgorithm:
 
-    def __init__(self, params, fitness, population_size=20, generations=20):
+    def __init__(self, params, fitness, population_size=20, generations=20, temperature_factor=0.9):
         """
         A genetic algorithm based on parameters params. Params is a dict with 
         string keys and arbitrary values. Only values of type Param will 
@@ -105,10 +105,12 @@ class GeneticAlgorithm:
         better.
         """
         self.params = params
+        self.fitness = fitness
         self.population_size = population_size
         self.generations = generations
+        self.temperature_factor = temperature_factor
+
         self.population = []
-        self.fitness = fitness
 
 
     def initialize_population(self):
@@ -138,9 +140,9 @@ class GeneticAlgorithm:
         for k in sorted(minion.params):
             v = minion.params[k]
             if isinstance(v, Param):
-                print(f'    *"{k}": {v.val}')
+                print(f'    *{k} = {v.val},')
             else:
-                print(f'     "{k}": {v}')
+                print(f'     {k} = {v},')
 
 
     def __run(self):
@@ -176,4 +178,4 @@ class GeneticAlgorithm:
             next_population.sort(key=itemgetter(0), reverse=True)
             self.population = next_population
 
-            temperature *= 0.9
+            temperature *= self.temperature_factor

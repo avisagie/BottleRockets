@@ -27,16 +27,16 @@ params = {
         "volume": center_volume,
         "water_l": Param(center_volume / 8, center_volume / 2),
         "pressure": 10, # relative pressure
-        "nozzle_radius": Param(0.0045, 0.0105),
-        "launch_tube_length": 1.3, # m
+        "nozzle_radius": Param(0.0075, 0.0105),
+        "launch_tube_length": Param(0.0, center_length*0.9), # m
 
         "booster_radius": radius,
         "booster_C_drag": 0.3,
         "booster_dry_mass": Param(0.3, 0.8),
         "booster_volume": booster_volume,
         "booster_water_l": Param(booster_volume / 8, booster_volume / 2),
-        "booster_nozzle_radius": Param(0.0045, 0.0105),
-        "booster_launch_tube_length": 0.3, # m
+        "booster_nozzle_radius": Param(0.0075, 0.0105),
+        "booster_launch_tube_length": Param(0.0, booster_length*0.9), # m
 
         "theta": Param(30, 65), # degrees
         "rail_length": 1.5, # m
@@ -63,5 +63,5 @@ def fitness(params):
 
     return max_position
 
-ga = GeneticAlgorithm(params, fitness)
+ga = GeneticAlgorithm(params, fitness, population_size=20, generations=30, temperature_factor=0.92)
 ga.run()
