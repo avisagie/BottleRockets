@@ -10,24 +10,22 @@ rocket.verbose = False
 
 from genetic import Param, GeneticAlgorithm
 
-radius = 0.09 / 2
+radius = 0.084 / 2
 
-length = 0.3 # m
+length = 1.0 # m
 volume = 1000 * pi * radius**2 * length # liters
-
-print(f"Rocket length:{length:0.01f}m, volume:{volume:0.01f}l")
 
 params = {
     "radius": radius,
     "C_drag": 0.3, 
-    "dry_mass": Param(0.1, 0.4),
+    "dry_mass": Param(0.1, 0.8),
     "volume": volume,
-    "water_l": Param(volume/8, volume/2),
-    "pressure": 8, # relative pressure
-    "nozzle_radius": Param(0.0045, 0.0105),
-    "launch_tube_length": 0.0, # Param(0.0, 0.9*length), # m
+    "water_l": Param(0.125*volume, 0.75*volume),
+    "pressure": 10, # relative pressure
+    "nozzle_radius": Param(0.0087/2, 0.0105),
+    "launch_tube_length": Param(0.0, 0.9*length), # m
 
-    "theta": Param(30.0, 90), # degrees
+    "theta": Param(30.0, 75), # degrees
     "rail_length": 2.0, # m
 
     "timestep": 0.001,
@@ -47,7 +45,14 @@ def fitness(params):
     # print(f"Distance and speed: max height:{np.max(position[:,1]):0.1f}m, distance:{max_distance:0.0f}m, "
     #     + f"max speed:{max_speed:0.0f}m/s, {ms2kmh(max_speed):0.0f}km/h), acceleration:{max_acceleration/9.81:0.0f}g")
 
-    return max_height
+    return max_distance
 
 ga = GeneticAlgorithm(params, fitness)
 ga.run()
+
+print(f"Rocket length:{length:0.01f}m, volume:{volume:0.01f}l")
+
+best_params = ga.get_best_params()
+traces = rocket_architectures.sim1(**best_params)
+rocket_architectures.plot_basic(traces)
+

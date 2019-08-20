@@ -16,28 +16,24 @@ if __name__ == "__main__":
     booster_volume = 1000 * pi * radius**2 * booster_length # liters
 
     traces = sim_3_boosters(
-        radius = radius,
-        C_drag = 0.4, 
-        dry_mass = 0.6,
-        volume = center_volume,
-        water_l = center_volume / 3,
-        pressure = 10, # relative pressure
-        nozzle_radius = 0.0105,
-        launch_tube_length = 1.3, # m
-
-        booster_radius = radius,
-        booster_C_drag = 0.3,
-        booster_dry_mass = 0.4,
-        booster_volume = booster_volume,
-        booster_water_l = 3.0 / 3,
-        booster_nozzle_radius = 0.0105,
-        booster_launch_tube_length = 0.3, # m
-
-        theta = 90, # degrees
-        rail_length = 1.5, # m
-
-        timestep = 0.001
-    )
+     C_drag = 0.4,
+     booster_C_drag = 0.3,
+    booster_dry_mass = 0.25,
+     booster_launch_tube_length = 1.0,
+    booster_nozzle_radius = 0.011,
+     booster_radius = 0.042,
+     booster_volume = 5.541769440932395,
+    booster_water_l = 2.815664357194821,
+    dry_mass = 0.7379773338578499,
+     launch_tube_length = 1.0,
+    nozzle_radius = 0.00435,
+     pressure = 10,
+     radius = 0.042,
+     rail_length = 1.5,
+    theta = 46.36640198337145,
+     timestep = 0.001,
+     volume = 9.975184993678312,
+    water_l = 4.609209988958819,    )
 
     time, position, velocity, acceleration = traces
     speed = sqrt(np.sum(velocity * velocity, axis=1))

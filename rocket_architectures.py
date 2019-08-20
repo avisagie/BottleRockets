@@ -176,6 +176,123 @@ def sim_3_boosters_bullet(
     return stepper.get_traces()
 
 
+def sim_3_stage(
+    pressure = 10, # relative pressure
+
+    s1_radius = 0.045,
+    s1_C_drag = 0.6,
+    s1_dry_mass = 0.3,
+    s1_volume = 3,
+    s1_water_l = 3.0 / 3,
+    s1_nozzle_radius = 0.0105,
+
+    s2_radius = 0.045,
+    s2_C_drag = 0.6,
+    s2_dry_mass = 0.3,
+    s2_volume = 3,
+    s2_water_l = 3.0 / 3,
+    s2_nozzle_radius = 0.0105,
+
+    s3_radius = 0.045,
+    s3_C_drag = 0.6,
+    s3_dry_mass = 0.3,
+    s3_volume = 3,
+    s3_water_l = 3.0 / 3,
+    s3_nozzle_radius = 0.0105,
+
+    theta = 45, # degrees
+    rail_length = 3, # m
+
+    timestep = 0.001
+    ):
+
+    """
+    Simulate a 3 booster first stage with a small streamlined "bullet". The bullet is a 
+    smaller water rocket that starts the moment the first stage stops accelerating.
+    """
+
+    stepper = Stepper()
+
+    position = np.array([0, 0.1])
+    velocity = 0.001 * np.array([cos(deg2rad(theta)), sin(deg2rad(theta))])
+    time = 0.0
+
+    stage1 = BoosterScienceBits( t0=0, 
+                                 water=s1_water_l,
+                                 pressure=bar2pa(pressure), 
+                                 dry_mass=s1_dry_mass + s2_dry_mass + s2_water_l/1000.0*water_density + s3_dry_mass + s3_water_l/1000.0*water_density, 
+                                 volume=s1_volume, 
+                                 C_drag=s1_C_drag, 
+                                 A_cross_sectional_area=pi*s1_radius**2, 
+                                 nozzle_radius=s1_nozzle_radius, 
+                                 launch_tube_length=0.5,
+                                 timestep=timestep )
+
+    phase = RocketWithComponents(position, position, velocity, time, 
+        components=[stage1], 
+        rail_length=0.0, 
+        timestep=timestep  
+    )
+
+    print(f'Starting stage 1 at {phase.t:0.003}s')
+    stepper.step(phase)
+
+    position = phase.position()
+    velocity = phase.velocity()
+    time = phase.t
+
+    stage2 = BoosterScienceBits( t0=0, 
+                                 water=s2_water_l,
+                                 pressure=bar2pa(pressure), 
+                                 dry_mass=s2_dry_mass + s3_dry_mass + s3_water_l/1000.0*water_density, 
+                                 volume=s2_volume, 
+                                 C_drag=s2_C_drag, 
+                                 A_cross_sectional_area=pi*s2_radius**2, 
+                                 nozzle_radius=s2_nozzle_radius, 
+                                 launch_tube_length=0.0,
+                                 timestep=timestep )
+
+    phase = RocketWithComponents(phase.position(), phase.position(), phase.velocity(), phase.t, 
+        components=[stage2], 
+        rail_length=0.0, 
+        timestep=timestep  
+    )
+
+    print(f'Starting stage 2 at {phase.t:0.003}s')
+    stepper.step(phase)
+
+    stage3 = BoosterScienceBits( t0=0, 
+                                 water=s3_water_l,
+                                 pressure=bar2pa(pressure), 
+                                 dry_mass=s3_dry_mass, 
+                                 volume=s3_volume, 
+                                 C_drag=s3_C_drag, 
+                                 A_cross_sectional_area=pi*s3_radius**2, 
+                                 nozzle_radius=s3_nozzle_radius, 
+                                 launch_tube_length=0.0,
+                                 timestep=timestep )
+
+    phase = RocketWithComponents(phase.position(), phase.position(), phase.velocity(), phase.t, 
+        components=[stage3], 
+        rail_length=0.0, 
+        timestep=timestep  
+    )
+
+    print(f'Starting stage 3 at {phase.t:0.003}s')
+    stepper.step(phase)
+
+    phase = Ballistic(phase.position(), phase.velocity(), phase.t,
+                    dry_mass=s3_dry_mass, 
+                    C_drag=s3_C_drag,
+                    A_cross_sectional_area=pi * s3_radius**2,
+                    timestep=timestep)
+
+    print(f'Ballistic at {phase.t:0.003}s')
+    stepper.step(phase)
+
+    return stepper.get_traces()
+
+
 def sim1(
     radius = 0.045,
     C_drag = 0.3,

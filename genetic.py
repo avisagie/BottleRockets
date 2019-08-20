@@ -179,3 +179,9 @@ class GeneticAlgorithm:
             self.population = next_population
 
             temperature *= self.temperature_factor
+
+
+    def get_best_params(self):
+        fitness, minion = self.population[0]
+        return minion.unpack()
+        
