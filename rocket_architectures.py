@@ -181,21 +181,24 @@ def sim_3_stage(
 
     s1_radius = 0.045,
     s1_C_drag = 0.6,
-    s1_dry_mass = 0.3,
+    s1_dry_mass_base = 0.1,
+    s1_dry_mass_g_per_l = 0.04,
     s1_volume = 3,
     s1_water_l = 3.0 / 3,
     s1_nozzle_radius = 0.0105,
 
     s2_radius = 0.045,
     s2_C_drag = 0.6,
-    s2_dry_mass = 0.3,
+    s2_dry_mass_base = 0.1,
+    s2_dry_mass_g_per_l = 0.04,
     s2_volume = 3,
     s2_water_l = 3.0 / 3,
     s2_nozzle_radius = 0.0105,
 
     s3_radius = 0.045,
     s3_C_drag = 0.6,
-    s3_dry_mass = 0.3,
+    s3_dry_mass_base = 0.1,
+    s3_dry_mass_g_per_l = 0.04,
     s3_volume = 3,
     s3_water_l = 3.0 / 3,
     s3_nozzle_radius = 0.0105,
@@ -211,6 +214,10 @@ def sim_3_stage(
     smaller water rocket that starts the moment the first stage stops accelerating.
     """
 
+    s1_dry_mass = s1_dry_mass_base + s1_volume * s1_dry_mass_g_per_l
+    s2_dry_mass = s1_dry_mass_base + s2_volume * s1_dry_mass_g_per_l
+    s3_dry_mass = s1_dry_mass_base + s3_volume * s1_dry_mass_g_per_l
+
     stepper = Stepper()
 
     position = np.array([0, 0.1])
@@ -225,7 +232,7 @@ def sim_3_stage(
                                  C_drag=s1_C_drag, 
                                  A_cross_sectional_area=pi*s1_radius**2, 
                                  nozzle_radius=s1_nozzle_radius, 
-                                 launch_tube_length=0.5,
+                                 launch_tube_length=1.0,
                                  timestep=timestep )
 
     phase = RocketWithComponents(position, position, velocity, time, 
@@ -234,7 +241,7 @@ def sim_3_stage(
         timestep=timestep  
     )
 
-    print(f'Starting stage 1 at {phase.t:0.003}s')
+    # print(f'Starting stage 1 at {phase.t:0.003}s')
     stepper.step(phase)
 
     position = phase.position()
@@ -258,7 +265,7 @@ def sim_3_stage(
         timestep=timestep  
     )
 
-    print(f'Starting stage 2 at {phase.t:0.003}s')
+    # print(f'Starting stage 2 at {phase.t:0.003}s')
     stepper.step(phase)
 
     stage3 = BoosterScienceBits( t0=0, 
@@ -278,7 +285,7 @@ def sim_3_stage(
         timestep=timestep  
     )
 
-    print(f'Starting stage 3 at {phase.t:0.003}s')
+    # print(f'Starting stage 3 at {phase.t:0.003}s')
     stepper.step(phase)
 
     phase = Ballistic(phase.position(), phase.velocity(), phase.t,
@@ -287,7 +294,7 @@ def sim_3_stage(
                     A_cross_sectional_area=pi * s3_radius**2,
                     timestep=timestep)
 
-    print(f'Ballistic at {phase.t:0.003}s')
+    # print(f'Ballistic at {phase.t:0.003}s')
     stepper.step(phase)
 
     return stepper.get_traces()

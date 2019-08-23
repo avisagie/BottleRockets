@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from numpy import sin, cos, sqrt, pi
 from util import *
@@ -22,22 +23,22 @@ params = {
 
     's1_radius': radius,
     's1_C_drag': 0.6,
-    's1_dry_mass': 0.300,
-    's1_volume': stage_volume,
+    's1_dry_mass_base': 0.100,
+    's1_volume': Param(1.0, 6.0),
     's1_water_l': Param(stage_volume/8, 0.75*stage_volume),
     's1_nozzle_radius': Param(0.0087/2, 0.0105),
 
     's2_radius': radius,
     's2_C_drag': 0.5,
-    's2_dry_mass': 0.300,
-    's2_volume': stage_volume,
+    's2_dry_mass_base': 0.100,
+    's2_volume': Param(1.0, 6.0),
     's2_water_l': Param(stage_volume/8, 0.75*stage_volume),
     's2_nozzle_radius': Param(0.0087/2, 0.0105),
 
     's3_radius': radius,
     's3_C_drag': 0.4,
-    's3_dry_mass': Param(0.25, 1.5 - 2*0.38),
-    's3_volume': stage_volume,
+    's3_dry_mass_base': Param(0.1, 1.0),
+    's3_volume': Param(1.0, 6.0),
     's3_water_l': Param(stage_volume/8, 0.75*stage_volume),
     's3_nozzle_radius': Param(0.0087/2, 0.0105),
 
@@ -65,9 +66,12 @@ def fitness(params):
     # print(f"Distance and speed: max height:{np.max(position[:,1]):0.1f}m, distance:{max_distance:0.0f}m, "
     #     + f"max speed:{max_speed:0.0f}m/s, {ms2kmh(max_speed):0.0f}km/h), acceleration:{max_acceleration/9.81:0.0f}g")
 
-    return max_height
+    if math.isnan(max_distance):
+        return 0.0
 
-ga = GeneticAlgorithm(params, fitness, population_size=30, generations=30, temperature_factor=0.90)
+    return max_distance
+
+ga = GeneticAlgorithm(params, fitness, population_size=40, generations=40, temperature_factor=0.94)
 ga.run()
 
 best_params = ga.get_best_params()
