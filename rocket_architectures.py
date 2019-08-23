@@ -299,12 +299,14 @@ def sim1(
     dry_mass = 0.5,
     volume = 8,
     water_l = 8.0 / 3,
-    pressure = 10, # relative pressure
+    pressure = 6, # relative pressure
     nozzle_radius = 0.0105,
     launch_tube_length = 0.0, # m
 
     theta = 40, # degrees
     rail_length = 1.5, # m
+
+    extra_frontal_surface = 0.0, # m^2, for things like fins.
 
     timestep = 0.001
     ):
@@ -319,7 +321,7 @@ def sim1(
                                  dry_mass=dry_mass, 
                                  volume=volume, 
                                  C_drag=C_drag, 
-                                 A_cross_sectional_area=pi*radius**2, 
+                                 A_cross_sectional_area=pi*radius**2 + extra_frontal_surface, 
                                  nozzle_radius=nozzle_radius, 
                                  launch_tube_length=launch_tube_length,
                                  timestep=timestep )
@@ -354,14 +356,14 @@ def plot_basic(traces):
     print(position)
 
     ax1 = pylab.subplot(211)
-    ax1.plot(time, accel, 'b')
+    ax1.plot(position[:,0], accel, 'b')
     ax1.set_ylabel("Acceleration (g)", color='b')
     ax2 = ax1.twinx()
-    ax2.plot(time, speed, 'r')
+    ax2.plot(position[:,0], speed, 'r')
     ax2.set_ylabel("Speed (m/s)", color='r')
     ax1.grid()
     ax1.set_title(f"Distance:{np.max(position[:,0]):0.0f}m, flight time:{max(time):0.01f}s")
-    ax1.set_xlabel("Flight time (s)")
+    ax1.set_xlabel("Horizontal distance (m)")
 
     ax1 = pylab.subplot(212)
     ax1.plot(position[:, 0], position[:, 1], 'b')

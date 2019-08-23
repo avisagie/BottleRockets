@@ -8,23 +8,29 @@ from rocket_architectures import sim_3_boosters, sim_3_boosters_bullet, sim1, pl
 
 if __name__ == "__main__":
 
-    radius = 0.09 / 2
+    radius = 0.084 / 2
 
     length = 1.35 # m
-    volume = 1000 * pi * radius**2 * length # liters
+    volume = 10.5 # 1000 * pi * radius**2 * length # liters
+
+    num_fins = 3
+    fin_thickness = 0.007
+    fin_length = 0.205
 
     traces = sim1(
         radius = radius,
-        C_drag = 0.3, 
-        dry_mass = 0.3,
+        C_drag = 0.5, 
+        dry_mass = 0.765,
         volume = volume,
-        water_l = 2,
-        pressure = 8, # relative pressure
-        nozzle_radius = 0.0045,
-        launch_tube_length = 0.0, # m
+        water_l = volume/3,
+        pressure = 6, # relative pressure
+        nozzle_radius = 0.01075,
+        launch_tube_length = 1.0, # m
 
-        theta = 45, # degrees
-        rail_length = 2.0, # m
+        theta = 50, # degrees
+        rail_length = 0.5, # m
+
+        extra_frontal_surface = num_fins * fin_length * fin_thickness,
 
         timestep = 0.001
     )
