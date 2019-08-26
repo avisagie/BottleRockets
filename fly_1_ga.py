@@ -12,21 +12,21 @@ from genetic import Param, GeneticAlgorithm
 
 radius = 0.084 / 2
 
-length = 1.0 # m
-volume = 1000 * pi * radius**2 * length # liters
+length = 1.8 # m
+volume = 10.5 # 1000 * pi * radius**2 * length # liters
 
 params = {
     "radius": radius,
-    "C_drag": 0.3, 
-    "dry_mass": Param(0.1, 0.8),
+    "C_drag": 0.45, 
+    "dry_mass": Param(0.1, 1.0),
     "volume": volume,
     "water_l": Param(0.125*volume, 0.75*volume),
-    "pressure": 10, # relative pressure
+    "pressure": 6, # relative pressure
     "nozzle_radius": Param(0.0087/2, 0.0105),
-    "launch_tube_length": Param(0.0, 0.9*length), # m
+    "launch_tube_length": 1.0, # Param(0.0, 0.9*length), # m
 
     "theta": Param(30.0, 75), # degrees
-    "rail_length": 2.0, # m
+    "rail_length": 0.5, # m
 
     "timestep": 0.001,
 }

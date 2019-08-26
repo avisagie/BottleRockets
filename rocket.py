@@ -428,7 +428,7 @@ class Stepper:
 
             ret = phase.step()
             if ret is None:
-                # water's run out
+                # water's run out, or it's over somehow.
                 break
 
             time, position, velocity = ret
