@@ -17,5 +17,5 @@ Then check out fly.py, edit it with new parameters and have fun!
 also check out rocket_architectures.py. There are two (at the time of writing):
 one with a center stage and three boosters and one with a single stage.
 
-fly*_ga.py try to optimise rocket parameters with a Genertic
+fly*_ga.py try to optimise rocket parameters with a Genetic
 Algorithm.
