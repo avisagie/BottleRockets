@@ -181,6 +181,10 @@ class BoostScienceBits:
         return self.t, self.position(), self.velocity()
 
 
+def always_happy(*args):
+    return True
+
+
 class RocketWithComponents:
 
     """
@@ -190,7 +194,7 @@ class RocketWithComponents:
     def __init__(self, position, origin, velocity, t0,
                  components,
                  rail_length = 0.0,
-                 validate: Callable[[], bool] = lambda: True, # tell if this system holds together
+                 validate = always_happy, # tell if this system holds together
                  timestep = 0.001):
         # (mass and pressure are vectors in case I want to use scipy integrators)
         self.state = np.array([position, velocity]) 
@@ -390,8 +394,8 @@ class BoosterScienceBits:
         # Update pressure here. TODO rewrite the equation to fit in fun.
         mass = self.mass()
         water_volume_lost = (self.mass_0 - mass)/water_density
-        launch_pipe_volume_lost = self.launch_tube_length * self.nozzle_area * max(0.0, self.launch_tube_length - self.distance_from_origin)
-        # print (f'Volume Lost: water={1000*water_volume_lost:0.03f}l, launch pipe:{1000*launch_pipe_volume_lost:0.03f}l')
+        launch_pipe_volume_lost = min(self.launch_tube_length, self.distance_from_origin) * self.nozzle_area
+        print (f'Volume Lost: water={1000*water_volume_lost:0.03f}l, launch pipe:{1000*launch_pipe_volume_lost:0.03f}l')
         self.state[1, 0] = self.pressure_0 * ( (self.volume_0 + water_volume_lost + launch_pipe_volume_lost) / self.volume_0 ) ** -self.gamma
 
         next_state = self.state + self.timestep * self.fun()
