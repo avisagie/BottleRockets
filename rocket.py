@@ -288,9 +288,12 @@ class RocketWithComponents:
             if step is None:
                 done.append(c)
 
-        for d in done:
-            if verbose: print(f"Removing {d} from a list of {len(self.components)} components")
+        for d in done:            
             self.components.remove(d)
+            if not d.removable():
+                raise Exception("Non removable part wants to fall off!!!")
+            if verbose: 
+                print(f"Removing {d} from a list of {len(self.components)} components")
 
         if not self.components:
             return None
@@ -311,6 +314,7 @@ class BoosterScienceBits:
                  dry_mass, volume, # in liter, total volume
                  C_drag, A_cross_sectional_area, nozzle_radius, # in meters
                  launch_tube_length = 0.0, # m. Assumes that the launch tube fits snuggly and has no friction
+                 removable = True,
                  timestep = 0.001):
         # (mass and pressure are vectors in case I want to use scipy integrators)
         mass = dry_mass + water/1000 * water_density # 1l = 0.001m^3
@@ -333,6 +337,8 @@ class BoosterScienceBits:
 
         self.in_launch_tube_phase = launch_tube_length > 0.0
 
+        self.__removable = removable
+
 
     def position(self):
         return self.state[0]
@@ -341,7 +347,11 @@ class BoosterScienceBits:
     def velocity(self):
         return self.state[1]
 
-    
+
+    def removable(self):
+        return self.__removable
+
+
     def F_drag(self, speed2):
         return - 0.5 * self.C_drag * air_density * self.A_cross_sectional_area * speed2
 
