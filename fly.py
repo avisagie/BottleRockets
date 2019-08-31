@@ -19,15 +19,15 @@ if __name__ == "__main__":
 
     traces = sim1(
         radius = radius,
-        C_drag = 0.34, 
-        dry_mass = 0.320,
+        C_drag = 0.32, 
+        dry_mass = 0.330,
         volume = volume,
         water_l = volume/3,
-        pressure = 9.5, # relative pressure
+        pressure = 10.0, # relative pressure
         nozzle_radius = 0.011,
         launch_tube_length = 1.0, # m
 
-        theta = 55, # degrees
+        theta = 45, # degrees
         rail_length = 1.0, # m
 
         extra_frontal_surface = num_fins * fin_length * fin_thickness,

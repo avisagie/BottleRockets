@@ -22,20 +22,20 @@ print(f"Booster length:{booster_length:0.01f}m, volume:{booster_volume:0.01f}l")
 
 params = {
         "radius": radius,
-        "C_drag": 0.34, 
-        "dry_mass": Param(0.300, 1.5 - 0.240),
+        "C_drag": 0.32, 
+        "dry_mass": Param(0.330, 0.8),
         "volume": center_volume,
         "water_l": Param(center_volume / 8, 0.75 * center_volume),
-        "pressure":10, # relative pressure
-        "nozzle_radius": Param(0.015/2, 0.011),
+        "pressure": 10, # relative pressure
+        "nozzle_radius": Param(0.005, 0.011),
         "launch_tube_length": 1.0, # Param(0.0, center_length*0.9), # m
 
         "booster_radius": radius,
-        "booster_C_drag": 0.5,
+        "booster_C_drag": 0.6,
         "booster_dry_mass": Param(0.240/3, 0.8),
         "booster_volume": booster_volume,
         "booster_water_l": Param(booster_volume / 8, 0.75 * booster_volume),
-        "booster_nozzle_radius": Param(0.0045, 0.011),
+        "booster_nozzle_radius": Param(0.005, 0.011), # Param(0.005, 0.011),
         "booster_launch_tube_length": 0.3, # Param(0.0, booster_length*0.9), # m
 
         "theta": Param(30, 75), # degrees
@@ -63,7 +63,7 @@ def fitness(params):
 
     return max_distance
 
-ga = GeneticAlgorithm(params, fitness, population_size=20, generations=30, temperature_factor=0.90)
+ga = GeneticAlgorithm(params, fitness, population_size=40, generations=30, temperature_factor=0.91)
 ga.run()
 
 best_params = ga.get_best_params()
