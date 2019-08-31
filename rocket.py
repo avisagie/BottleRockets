@@ -257,11 +257,14 @@ class RocketWithComponents:
         # print(f'{self.t:0.03f}s: {F_thrust}, {F_drag}, {mass}kg')
 
         a_thrust = 1/mass * F_thrust * direction
-        a_drag = 1/mass * F_drag * -direction
+        a_drag = 1/mass * F_drag * direction
         dvdt = a_drag + a_grav + a_thrust
         self.acceleration = dvdt
 
         dsdt = velocity
+
+        if not self.validate(speed2):
+            raise Exception("It broke apart")
 
         return np.array([dsdt, dvdt])
 
@@ -287,9 +290,6 @@ class RocketWithComponents:
 
         if not self.components:
             return None
-
-        if not self.validate():
-            raise Exception("It broke apart")
 
         return self.t, self.position(), self.velocity()
 

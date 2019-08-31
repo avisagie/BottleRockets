@@ -24,6 +24,8 @@ def sim_3_boosters(
     booster_nozzle_radius = 0.0105,
     booster_launch_tube_length = 0.3, # m
 
+    extra_frontal_surface = 0.0,
+
     theta = 40, # degrees
     rail_length = 1.5, # m
 
@@ -52,17 +54,17 @@ def sim_3_boosters(
                                  dry_mass=dry_mass, 
                                  volume=volume, 
                                  C_drag=C_drag, 
-                                 A_cross_sectional_area=pi*radius**2, 
+                                 A_cross_sectional_area=pi*radius**2 + extra_frontal_surface, 
                                  nozzle_radius=nozzle_radius, 
                                  launch_tube_length=launch_tube_length,
                                  timestep=timestep )
 
-    def validate():
+    def validate(speed2):
         # TODO revisit, and make sure it gets called
-        # Check that the center stage does nto pull away from the boosters
-        a_center = center.F_thrust() / center.mass()
+        # Check that the center stage does not pull away from the boosters
+        a_center = (center.F_thrust() + center.F_drag(speed2)) / center.mass()
         for booster in boosters: # redundant because they're identical
-            a_booster = booster.F_thrust() / booster.mass()
+            a_booster = (booster.F_thrust() + booster.F_drag(speed2)) / booster.mass()
             if a_booster < a_center:
                 return False
         return True
@@ -363,14 +365,14 @@ def plot_basic(traces):
     print(position)
 
     ax1 = pylab.subplot(211)
-    ax1.plot(position[:,0], accel, 'b')
+    ax1.plot(time, accel, 'b')
     ax1.set_ylabel("Acceleration (g)", color='b')
     ax2 = ax1.twinx()
-    ax2.plot(position[:,0], speed, 'r')
+    ax2.plot(time, speed, 'r')
     ax2.set_ylabel("Speed (m/s)", color='r')
     ax1.grid()
     ax1.set_title(f"Distance:{np.max(position[:,0]):0.0f}m, flight time:{max(time):0.01f}s")
-    ax1.set_xlabel("Horizontal distance (m)")
+    ax1.set_xlabel("Time (s)")
 
     ax1 = pylab.subplot(212)
     ax1.plot(position[:, 0], position[:, 1], 'b')
