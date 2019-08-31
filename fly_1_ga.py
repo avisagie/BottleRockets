@@ -10,22 +10,22 @@ rocket.verbose = False
 
 from genetic import Param, GeneticAlgorithm
 
-radius = 0.084 / 2
+radius = 0.068 / 2
 
-length = 1.8 # m
-volume = 10.5 # 1000 * pi * radius**2 * length # liters
+length = 1.0 # m
+volume = 1000 * pi * radius**2 * length # liters
 
 params = {
     "radius": radius,
-    "C_drag": 0.45, 
+    "C_drag": 0.34, 
     "dry_mass": Param(0.1, 1.0),
     "volume": volume,
     "water_l": Param(0.125*volume, 0.75*volume),
-    "pressure": 6, # relative pressure
+    "pressure": 9.5, # relative pressure
     "nozzle_radius": Param(0.0087/2, 0.0105),
     "launch_tube_length": 1.0, # Param(0.0, 0.9*length), # m
 
-    "theta": Param(30.0, 75), # degrees
+    "theta": 40, # Param(30.0, 75), # degrees
     "rail_length": 0.5, # m
 
     "timestep": 0.001,

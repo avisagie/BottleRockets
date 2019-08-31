@@ -140,7 +140,7 @@ class GeneticAlgorithm:
         for k in sorted(minion.params):
             v = minion.params[k]
             if isinstance(v, Param):
-                print(f'    *{k} = {v.val},')
+                print(f'     {k} = {v.val}, # optimised')
             else:
                 print(f'     {k} = {v},')
 

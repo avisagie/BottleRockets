@@ -395,7 +395,7 @@ class BoosterScienceBits:
         mass = self.mass()
         water_volume_lost = (self.mass_0 - mass)/water_density
         launch_pipe_volume_lost = min(self.launch_tube_length, self.distance_from_origin) * self.nozzle_area
-        print (f'Volume Lost: water={1000*water_volume_lost:0.03f}l, launch pipe:{1000*launch_pipe_volume_lost:0.03f}l')
+        # print (f'Volume Lost: water={1000*water_volume_lost:0.03f}l, launch pipe:{1000*launch_pipe_volume_lost:0.03f}l')
         self.state[1, 0] = self.pressure_0 * ( (self.volume_0 + water_volume_lost + launch_pipe_volume_lost) / self.volume_0 ) ** -self.gamma
 
         next_state = self.state + self.timestep * self.fun()
@@ -412,7 +412,7 @@ class BoosterScienceBits:
 
 class Stepper:
 
-    def __init__(self, print_interval=0.01):
+    def __init__(self, print_interval=0.025):
         self.t_time = []
         self.t_position = []
         self.t_velocity = []
