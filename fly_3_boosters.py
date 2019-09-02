@@ -20,24 +20,24 @@ if __name__ == "__main__":
     fin_length = 0.110
 
     traces = sim_3_boosters(
-        C_drag = 0.320,
-        booster_C_drag = 0.600,
-        booster_dry_mass = 0.080, # optimised
-        booster_launch_tube_length = 0.300,
-        booster_nozzle_radius = 0.011, # optimised
-        booster_radius = 0.034,
-        booster_volume = 2.000,
-        booster_water_l = 0.838, # optimised
-        dry_mass = 0.400, # optimised
-        launch_tube_length = 1.000,
-        nozzle_radius = 0.005,
-        pressure = 10.000,
-        radius = 0.034,
-        rail_length = 0.300,
-        theta = 45.000,
-        timestep = 0.001,
-        volume = 3.632,
-        water_l = 1.284, # optimised
+        C_drag = 0.320,                                  
+        booster_C_drag = 0.600,                          
+        booster_dry_mass = 0.147, # optimised            
+        booster_launch_tube_length = 0.300,              
+        booster_nozzle_radius = 0.011, # optimised       
+        booster_radius = 0.042,                          
+        booster_volume = 2.650,                          
+        booster_water_l = 0.891, # optimised             
+        dry_mass = 0.464, # optimised                    
+        launch_tube_length = 1.000,                      
+        nozzle_radius = 0.011,                           
+        pressure = 10.000,                               
+        radius = 0.034,                                  
+        rail_length = 0.300,                             
+        theta = 45.000,                                  
+        timestep = 0.001,                                
+        volume = 3.632,                                  
+        water_l = 1.469, # optimised                     
     )
 
     time, position, velocity, acceleration = traces
