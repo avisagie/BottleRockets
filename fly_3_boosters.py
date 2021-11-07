@@ -23,7 +23,7 @@ if __name__ == "__main__":
         C_drag = 0.320,                                  
         booster_C_drag = 0.600,                          
         booster_dry_mass = 0.147, # optimised            
-        booster_launch_tube_length = 0.300,              
+        booster_launch_tube_length = 0.0300,              
         booster_nozzle_radius = 0.011, # optimised       
         booster_radius = 0.042,                          
         booster_volume = 2.650,                          

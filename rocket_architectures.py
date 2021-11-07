@@ -29,7 +29,9 @@ def sim_3_boosters(
     theta = 40, # degrees
     rail_length = 1.5, # m
 
-    timestep = 0.001
+    timestep = 0.001,
+
+    number_of_boosters = 3
     ):
 
     stepper = Stepper()
@@ -46,7 +48,7 @@ def sim_3_boosters(
                                     A_cross_sectional_area=pi*booster_radius**2, 
                                     nozzle_radius=booster_nozzle_radius, 
                                     launch_tube_length=booster_launch_tube_length,
-                                    timestep=timestep) for x in range(3)]
+                                    timestep=timestep) for x in range(number_of_boosters)]
 
     center = BoosterScienceBits( t0=0, 
                                  water=water_l,
