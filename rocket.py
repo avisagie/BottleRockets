@@ -93,7 +93,8 @@ class Ballistic(Phase):
 
         return self.t, self.position(), self.velocity()
 
-
+# TODO: Look at incorporating pipe, more accurate force and water flow rate stuff
+# TODO: Factor out launch phase?
 class BoostScienceBits(Phase):
 
     """
@@ -157,6 +158,7 @@ class BoostScienceBits(Phase):
         # Assumption: It thrusts in the same direction as it's flying. 
         # It points in the direction that it's pointing. 
         # I.e. aerodynamically stable and perfectly responsive.
+
         F_thrust = 2*self.nozzle_area * pressure
 
         # print(f'{self.t:0.03f}s: {F_thrust}N, {F_drag}N, {mass}kg')
@@ -207,124 +209,7 @@ class BoostScienceBits(Phase):
 def always_happy(*args):
     return True
 
-
-class RocketWithComponents(Phase):
-
-    """
-    Boost phase that sheds components when they are spent (step returns None)
-    """
-
-    def __init__(self, position, origin, velocity, t0,
-                 components,
-                 rail_length = 0.0,
-                 validate = always_happy, # tell if this system holds together
-                 timestep = 0.001):
-        # (mass and pressure are vectors in case I want to use scipy integrators)
-        self.state = np.array([position, velocity]) 
-        self.t = t0
-        self.timestep = timestep
-        self.acceleration = 0.0
-        self.components = components
-        self.rail_length = rail_length
-        self.origin = origin
-
-        self.validate = validate
-
-
-    def position(self):
-        return self.state[0]
-
-
-    def velocity(self):
-        return self.state[1]
-
-    
-    def F_drag(self, speed2):
-        return sum(c.F_drag(speed2) for c in self.components)
-
-
-    def F_thrust(self):
-        return sum(c.F_thrust() for c in self.components)
-
-
-    def mass(self):
-        return sum(c.mass() for c in self.components)
-
-
-    def fun(self):
-        """
-        The right hand side of the system of ODEs. 
-        (https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.RK45.html#scipy.integrate.RK45)
-        """
-
-        velocity = self.velocity()
-        speed2 = np.sum(velocity * velocity) # scalar
-        direction = 1/sqrt(speed2) * velocity # vector
-
-        F_drag = self.F_drag(speed2)
-
-        distance_from_origin = sqrt(sum((self.origin - self.position()) * (self.origin - self.position())))
-
-        # while it's on the rail, just get the component of gravity backwards along the rail
-        if distance_from_origin > self.rail_length:
-            a_grav = -np.array([0, 9.81])
-            for c in self.components: c.launch_tube_phase(distance_from_origin)
-        else:
-            a_grav = np.dot(-np.array([0, 9.81]), direction) * direction
-            for c in self.components: c.launch_tube_phase(distance_from_origin)
-
-
-        # Assumption: It thrusts in the same direction as it's flying. 
-        # It points in the direction that it's pointing. 
-        # I.e. aerodynamically stable and perfectly responsive.
-        F_thrust = self.F_thrust()
-
-        mass = self.mass()
-
-        # print(f'{self.t:0.03f}s: {F_thrust}, {F_drag}, {mass}kg')
-
-        a_thrust = 1/mass * F_thrust * direction
-        a_drag = 1/mass * F_drag * direction
-        dvdt = a_drag + a_grav + a_thrust
-        self.acceleration = dvdt
-
-        dsdt = velocity
-
-        if not self.validate(speed2):
-            raise Exception("It broke apart")
-
-        return np.array([dsdt, dvdt])
-
-
-    def step(self):
-        """
-        Step the system one step forward.
-        Return: t, position, velocity or None if the water's run out
-        """
-
-        self.state = self.state + self.timestep * self.fun() 
-        self.t += self.timestep
-
-        done = []
-        for c in self.components:
-            step = c.step()
-            if step is None:
-                done.append(c)
-
-        for d in done:            
-            self.components.remove(d)
-            if not d.removable():
-                raise Exception("Non removable part wants to fall off!!!")
-            if verbose: 
-                print(f"Removing {d} from a list of {len(self.components)} components")
-
-        if not self.components:
-            return None
-
-        return self.t, self.position(), self.velocity()
-
-
-class BoosterScienceBits(Phase):
+class BoosterScienceBits():
 
     """
     Boost phase from science bits: http://www.sciencebits.com/RocketEqs 
@@ -441,6 +326,132 @@ class BoosterScienceBits(Phase):
         self.t += self.timestep
 
         return self.t
+
+class RocketWithComponents(Phase):
+
+    """
+    Boost phase that sheds components when they are spent (step returns None)
+    """
+
+    def __init__(self, position, origin, velocity, t0,
+                 components,
+                 rail_length = 0.0,
+                 validate = always_happy, # tell if this system holds together
+                 timestep = 0.001):
+        # (mass and pressure are vectors in case I want to use scipy integrators)
+        self.state = np.array([position, velocity]) 
+        self.t = t0
+        self.timestep = timestep
+        self.acceleration = 0.0
+        self.components = components
+        self.rail_length = rail_length
+        self.origin = origin
+
+        self.validate = validate
+
+    @property
+    def components(self) -> BoosterScienceBits:
+        return self._components
+
+    @components.setter
+    def components(self,values):
+        if not isinstance(values,list):
+            values = [values]
+
+        if not all([isinstance(v,BoosterScienceBits) for v in values]):
+            raise ValueError("Currently only components of type BoosterScienceBits are allowed")
+        
+        self._components = values
+
+    def position(self):
+        return self.state[0]
+
+    def velocity(self):
+        return self.state[1]
+
+    def F_drag(self, speed2):
+        return sum(c.F_drag(speed2) for c in self.components)
+
+
+    def F_thrust(self):
+        return sum(c.F_thrust() for c in self.components)
+
+
+    def mass(self):
+        return sum(c.mass() for c in self.components)
+
+
+    def fun(self):
+        """
+        The right hand side of the system of ODEs. 
+        (https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.RK45.html#scipy.integrate.RK45)
+        """
+
+        velocity = self.velocity()
+        speed2 = np.sum(velocity * velocity) # scalar
+        direction = 1/sqrt(speed2) * velocity # vector
+
+        F_drag = self.F_drag(speed2)
+
+        distance_from_origin = sqrt(sum((self.origin - self.position()) * (self.origin - self.position())))
+
+        # while it's on the rail, just get the component of gravity backwards along the rail
+        if distance_from_origin > self.rail_length:
+            a_grav = -np.array([0, 9.81])
+            for c in self.components: c.launch_tube_phase(distance_from_origin)
+        else:
+            a_grav = np.dot(-np.array([0, 9.81]), direction) * direction
+            for c in self.components: c.launch_tube_phase(distance_from_origin)
+
+
+        # Assumption: It thrusts in the same direction as it's flying. 
+        # It points in the direction that it's pointing. 
+        # I.e. aerodynamically stable and perfectly responsive.
+        F_thrust = self.F_thrust()
+
+        mass = self.mass()
+
+        # print(f'{self.t:0.03f}s: {F_thrust}, {F_drag}, {mass}kg')
+
+        a_thrust = 1/mass * F_thrust * direction
+        a_drag = 1/mass * F_drag * direction
+        dvdt = a_drag + a_grav + a_thrust
+        self.acceleration = dvdt
+
+        dsdt = velocity
+
+        if not self.validate(speed2):
+            raise Exception("It broke apart")
+
+        return np.array([dsdt, dvdt])
+
+
+    def step(self):
+        """
+        Step the system one step forward.
+        Return: t, position, velocity or None if the water's run out
+        """
+
+        self.state = self.state + self.timestep * self.fun() 
+        self.t += self.timestep
+
+        done = []
+        for c in self.components:
+            step = c.step()
+            if step is None:
+                done.append(c)
+
+        for d in done:            
+            self.components.remove(d)
+            if not d.removable():
+                raise Exception("Non removable part wants to fall off!!!")
+            if verbose: 
+                print(f"Removing {d} from a list of {len(self.components)} components")
+
+        if not self.components:
+            return None
+
+        return self.t, self.position(), self.velocity()
 
 
 class Stepper:
