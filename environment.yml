@@ -1,0 +1,11 @@
+name: bottlerockets
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - matplotlib
+  - plotly
+  - ca-certificates
+  - openssl
+prefix: /home/ruan/miniconda3/envs/botrock

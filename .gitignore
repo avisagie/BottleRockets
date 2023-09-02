@@ -3,3 +3,4 @@ virt
 __pycache__/
 venv
 out
+scratch.py

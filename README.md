@@ -5,12 +5,11 @@ Experiments in bottle rocket simulations.
 
 # Getting  started
 
-1. Install python 3.7
+1. Install [mamba](https://mamba.readthedocs.io/en/latest/mamba-installation.html#mamba-install)
 1. `git clone https://github.com/avisagie/BottleRockets.git`
 1. `cd BottleRockets`
-1. `virtualenv virt`
-1. `virt\Scripts\activate.bat`
-1. `pip install -r requirements.txt`
+1. `mamba env create -f environment.yml`
+1. `mamba activate bottlerockets`
 1. `python -u fly.py`
 
 Then check out fly.py, edit it with new parameters and have fun!
