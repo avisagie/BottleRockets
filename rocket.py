@@ -28,9 +28,12 @@ class Phase(ABC):
         pass
 
     @property
-    @abstractmethod
     def acceleration(self) -> np.ndarray:
-        pass
+        return self._acceleration
+    
+    @acceleration.setter
+    def acceleration(self,value):
+        self._acceleration = value
 
 
 class Ballistic(Phase):
