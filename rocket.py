@@ -1,7 +1,8 @@
 import numpy as np
 from numpy import sin, cos, sqrt, pi
-import scipy.integrate
-from typing import Callable, List, Dict
+# import scipy.integrate
+from typing import Tuple
+from abc import ABC,abstractmethod
 
 # Assume it's constant for the flight and use dry air, which is more dense than humid air.
 # https://en.wikipedia.org/wiki/Density_of_air
@@ -13,7 +14,26 @@ water_density = 1000.0 # kg / m^3
 
 verbose = True
 
-class Ballistic:
+class Phase(ABC):
+    @abstractmethod
+    def step(self) -> Tuple[float,np.ndarray,np.ndarray]:
+        """
+        Step the system one step forward.
+        Return: t, position, velocity
+        """
+        pass
+
+    @abstractmethod
+    def position(self) -> np.ndarray:
+        pass
+
+    @property
+    @abstractmethod
+    def acceleration(self) -> np.ndarray:
+        pass
+
+
+class Ballistic(Phase):
     def __init__(self, position, velocity, t0, dry_mass, C_drag, A_cross_sectional_area, timestep = 0.001):
         """
         Starting conditions: 
@@ -71,7 +91,7 @@ class Ballistic:
         return self.t, self.position(), self.velocity()
 
 
-class BoostScienceBits:
+class BoostScienceBits(Phase):
 
     """
     Boost phase from science bits: http://www.sciencebits.com/RocketEqs 
@@ -185,7 +205,7 @@ def always_happy(*args):
     return True
 
 
-class RocketWithComponents:
+class RocketWithComponents(Phase):
 
     """
     Boost phase that sheds components when they are spent (step returns None)
@@ -301,7 +321,7 @@ class RocketWithComponents:
         return self.t, self.position(), self.velocity()
 
 
-class BoosterScienceBits:
+class BoosterScienceBits(Phase):
 
     """
     Boost phase from science bits: http://www.sciencebits.com/RocketEqs 
@@ -431,7 +451,7 @@ class Stepper:
         self.cur_interval: int = 0
     
 
-    def step(self, phase):
+    def step(self, phase : Phase):
         """
         Step until the rocket hits the floor or the phase returns None.
         """
