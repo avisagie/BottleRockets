@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import sin, cos, sqrt, pi
-from rocket import Stepper, Ballistic, BoosterScienceBits, RocketWithComponents, water_density
+from rocket import Stepper, Ballistic, BoosterScienceBits, RocketWithComponents, water_density, Traces
 from util import *
 from itertools import chain
 
@@ -357,7 +357,7 @@ def sim1(
     return stepper.get_traces()
 
 
-def plot_basic(traces):
+def plot_basic(traces : Traces):
     time, position, velocity, acceleration = traces
     speed = sqrt(np.sum(velocity * velocity, axis=1))
     accel = sqrt(np.sum(acceleration * acceleration, axis=1)) / 9.81 # in Gs

@@ -3,6 +3,7 @@ from numpy import sin, cos, sqrt, pi
 # import scipy.integrate
 from typing import Tuple
 from abc import ABC,abstractmethod
+from collections import namedtuple
 
 # Assume it's constant for the flight and use dry air, which is more dense than humid air.
 # https://en.wikipedia.org/wiki/Density_of_air
@@ -453,7 +454,7 @@ class RocketWithComponents(Phase):
 
         return self.t, self.position(), self.velocity()
 
-
+Traces = namedtuple("Trace",["time","position","velocity","acceleration"])
 class Stepper:
 
     def __init__(self, print_interval=0.025):
@@ -494,5 +495,11 @@ class Stepper:
 
         self.count = 0
 
-    def get_traces(self):
-        return np.array(self.t_time), np.array(self.t_position), np.array(self.t_velocity), np.array(self.t_acceleration)
+    def get_traces(self) -> Traces:
+        trace = Traces(
+            np.array(self.t_time),
+            np.array(self.t_position),
+            np.array(self.t_velocity),
+            np.array(self.t_acceleration)
+        )
+        return trace 
