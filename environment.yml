@@ -8,4 +8,7 @@ dependencies:
   - plotly
   - ca-certificates
   - openssl
-prefix: /home/ruan/miniconda3/envs/botrock
+  - panel
+  - certifi
+  - jupyterlab
+  - black
