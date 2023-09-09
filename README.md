@@ -10,7 +10,8 @@ Experiments in bottle rocket simulations.
 1. `cd BottleRockets`
 1. `mamba env create -f environment.yml`
 1. `mamba activate bottlerockets`
-1. `python -u fly.py`
+1. `panel serve panel_gui/gui.py` to run simulations using the gui
+1. You could also run `python -u fly.py`
 
 Then check out fly.py, edit it with new parameters and have fun!
 also check out rocket_architectures.py. There are two (at the time of writing):
