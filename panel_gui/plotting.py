@@ -65,11 +65,13 @@ def plot_multiple_traces(test_names: list[str], traces: list[Traces]) -> go.Figu
         subplot_titles=("Position", "Speed", "Acceleration"),
     )
 
-    for test_number,(name, trace) in enumerate(zip(test_names, traces)):
+    for test_number, (name, trace) in enumerate(zip(test_names, traces)):
         scatters = create_scatter_plots_from_trace(name, trace)
         for i, scatter in enumerate(scatters):
-            fig.add_trace(scatter, row=i+1, col=1)
-            fig.data[-1].update(marker=dict(color=px.colors.qualitative.Plotly[test_number]))
+            fig.add_trace(scatter, row=i + 1, col=1)
+            fig.data[-1].update(
+                marker=dict(color=px.colors.qualitative.Plotly[test_number])
+            )
 
     fig.update_xaxes(title_text="Horizontal Distance (m)", row=1, col=1)
     fig.update_yaxes(title_text="Altitude (m)", row=1, col=1)
@@ -88,4 +90,6 @@ if __name__ == "__main__":
     fig = plot_single_trace("sim 1", test_trace)
     fig.show()
 
-    plot_multiple_traces(["sim 1"]*2,[test_trace]*2).show()
+    fig = plot_multiple_traces(["sim 1"] * 2, [test_trace] * 2)
+    fig.layout.autosize = True
+    fig.show()
