@@ -17,7 +17,7 @@ air_density = 1.2 # kg / m^3
 # pretty close for our temperatures and height above sea level
 water_density = 1000.0 # kg / m^3
 
-verbose = True
+verbose = False
 
 class Phase(ABC):
     @abstractmethod
@@ -98,11 +98,15 @@ class WaterThruster():
         """
         if self.z_H <= 0:
             return 0,0
-        
-        inertial_resistance_part = self._average_nozzle_to_body_ratio(self.z_H) * self.d_u_out/d_t
-        speed_2 = - (P_gauge/water_density + inertial_resistance_part) / self._squared_boundary_ratio (self.z_H)
+        print(self._average_nozzle_to_body_ratio(self.z_H))
+        inertial_inertia_part = self._average_nozzle_to_body_ratio(self.z_H) * self.d_u_out/d_t
+        speed_2 = - (P_gauge/water_density + inertial_inertia_part) / self._squared_boundary_ratio (self.z_H)
         #TODO: add (a + g)H and F_int
-        u_new = speed_2**0.5
+
+        # Current config is unstable
+        # TODO: rewrite to solve du/dt in stead of u
+        speed_2 = max(0,speed_2)
+        u_new = -1.0 * speed_2**0.5
         self.d_u_out = u_new - self.u_out
         self.u_out = u_new
 
@@ -114,7 +118,8 @@ class WaterThruster():
         d_H = d_H_dt*d_t
         self.z_H += d_H
 
-        ejected_mass = d_H*A_H*water_density
+        ejected_mass = abs(d_H*A_H*water_density)
+        print(f"H : {self.z_H:.3f}, U : {u_new:.3f}, F : {F:.3f}, kdu/dt : {inertial_inertia_part:.3f}")
 
         return F,ejected_mass
 
