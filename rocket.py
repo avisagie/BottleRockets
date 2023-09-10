@@ -1,9 +1,13 @@
 import numpy as np
 from numpy import sin, cos, sqrt, pi
 # import scipy.integrate
-from typing import Tuple
+from typing import Tuple,Callable
 from abc import ABC,abstractmethod
 from collections import namedtuple
+from physics import pressure_after_adiabatic_expansion
+import scipy.integrate as spi
+from scipy.optimize import brentq
+from bottle_shapes import simple_bottle
 
 # Assume it's constant for the flight and use dry air, which is more dense than humid air.
 # https://en.wikipedia.org/wiki/Density_of_air
@@ -35,6 +39,84 @@ class Phase(ABC):
     @acceleration.setter
     def acceleration(self,value):
         self._acceleration = value
+
+class WaterThruster():
+    """
+    Computes thrust and inertial forces due to the movement and expulsion of water.
+    See "Water Motion from the Bernoulli Equation" from https://www.et.byu.edu/~wheeler/benchtop/pix/thrust_eqns.pdf
+    Notation:
+      z : distance from nozzle, 
+      A(z) : cross-sectional area at z
+      z_H : current "height" of the water. (distance of boundary to nozzle)
+      u_out : speed of ejected water relative to the nozzle 
+    """
+    def __init__(self, nozzle_profile : Callable, starting_water_volume : float):
+        """
+        nozzle_profile: A callable A(z) that returns the cross sectional area in m^2 of the water
+        vessel at distance z from the outlet/nozzle. This is important for calculating the
+        flow of water at distance z from the nozzle.
+
+        starting_volume: A float providing the amount of water in cubic meters.
+        Used together with nozzle_profile (A(z)) to compute the starting height of the boundary
+        area z_start.
+        """
+
+        self.A = nozzle_profile
+        self.water_volume_0 = starting_water_volume
+        self.z_H = self._distance_from_nozzle(nozzle_profile,starting_water_volume)
+        self.A_out = nozzle_profile(0)
+
+        self.u_out = 0
+        self.d_u_out = 0
+
+
+    @staticmethod
+    def _distance_from_nozzle(A : Callable,starting_volume : float):
+
+        def volume_difference(z):
+            volume,_ = spi.quad(A,0,z)
+            return volume - starting_volume
+        
+        z_0 = brentq(volume_difference, 0, 10)
+        return z_0
+    
+    def _average_nozzle_to_body_ratio(self, z_H):
+        "B(H)"
+        ratio = lambda z: self.A_out/self.A(z)
+        area,error = spi.quad(ratio,0,z_H)
+        return area
+    
+    def _squared_boundary_ratio(self,z_H):
+        "C(H)"
+        ratio = self.A_out/self.A(z_H)
+        return (ratio**2 - 1.0) / 2.0
+    
+    def step(self,P_gauge : float,d_t : float) -> Tuple[float,float]:
+        """
+        Returns thrust and mass of water ejected for one time step.
+        Requires current gauge pressure (absolute - atmospheric)
+        """
+        if self.z_H <= 0:
+            return 0,0
+        
+        inertial_resistance_part = self._average_nozzle_to_body_ratio(self.z_H) * self.d_u_out/d_t
+        speed_2 = - (P_gauge/water_density + inertial_resistance_part) / self._squared_boundary_ratio (self.z_H)
+        #TODO: add (a + g)H and F_int
+        u_new = speed_2**0.5
+        self.d_u_out = u_new - self.u_out
+        self.u_out = u_new
+
+        F = water_density * self.A_out * speed_2
+        
+        # compute how far the water boundary moved
+        A_H = self.A(self.z_H)
+        d_H_dt = (self.A_out * u_new)/A_H
+        d_H = d_H_dt*d_t
+        self.z_H += d_H
+
+        ejected_mass = d_H*A_H*water_density
+
+        return F,ejected_mass
 
 
 class Ballistic(Phase):
@@ -124,7 +206,6 @@ class BoostScienceBits(Phase):
         self.timestep = timestep
         self.nozzle_radius = nozzle_radius
         self.nozzle_area = pi*self.nozzle_radius**2
-        self.gamma = 1.4 # adiabatic constant for dry air
         self.rail_length = rail_length
 
         self.origin = position
@@ -193,7 +274,11 @@ class BoostScienceBits(Phase):
         mass = self.state[2][0]
         water_volume_lost = (self.mass_0 - mass)/water_density
         # print(f'Volume lost: water={1000*water_volume_lost:0.3f}l')
-        next_pressure = self.pressure_0 * ( (self.volume_0 + water_volume_lost) / self.volume_0 ) ** -self.gamma
+        next_pressure = pressure_after_adiabatic_expansion(
+            starting_pressure=self.pressure_0,
+            starting_gas_volume=self.volume_0,
+            current_gas_volume=self.volume_0 + water_volume_lost,
+        )
 
         next_state = self.state + self.timestep * self.fun() 
         next_mass = next_state[2][0]
@@ -239,7 +324,6 @@ class BoosterScienceBits():
         self.C_drag = C_drag
         self.A_cross_sectional_area = A_cross_sectional_area
         self.timestep = timestep
-        self.gamma = 1.4 # adiabatic constant for dry air
 
         self.launch_tube_length = max(0.0, launch_tube_length)
         self.distance_from_origin = 0.0
@@ -247,6 +331,9 @@ class BoosterScienceBits():
         self.in_launch_tube_phase = launch_tube_length > 0.0
 
         self.__removable = removable
+
+        nozzle_profile = simple_bottle(nozzle_radius,(A_cross_sectional_area/np.pi)**0.5)
+        self.thruster = WaterThruster(nozzle_profile=nozzle_profile,starting_water_volume=water/1000)
 
 
     def position(self):
@@ -270,7 +357,9 @@ class BoosterScienceBits():
         if self.in_launch_tube_phase:
             return self.nozzle_area * pressure # https://www.et.byu.edu/~wheeler/benchtop/pix/thrust_eqns.pdf Section III
         else:
-            return 2 * self.nozzle_area * pressure
+            F,d_mass = self.thruster.step(pressure,self.timestep)
+            self.state[0, 0] -= d_mass
+            return F
 
     
     def mass(self):
@@ -284,24 +373,6 @@ class BoosterScienceBits():
             if verbose: print(f"Distance:{distance_from_origin}, time:{self.t:0.03f}s, off the launch tube.")
         self.in_launch_tube_phase = in_launch_tube_phase
         self.distance_from_origin = distance_from_origin
-        
-
-    def fun(self):
-        """
-        The right hand side of the system of ODEs. 
-        (https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.RK45.html#scipy.integrate.RK45)
-        """
-
-        pressure = self.state[1, 0]
-        mass = self.state[0, 0]
-        if self.in_launch_tube_phase:
-            # assuming water loss during the launch tube phase is negligible. 
-            # TODO model this. The nozzle area consists of the ring around the launch tube.
-            dmdt = 0 
-        else:
-            dmdt = - self.nozzle_area * water_density * sqrt(2 * pressure / water_density)
-
-        return np.array([[dmdt], [0]])
 
 
     def step(self):
@@ -314,16 +385,15 @@ class BoosterScienceBits():
         mass = self.mass()
         water_volume_lost = (self.mass_0 - mass)/water_density
         launch_pipe_volume_lost = min(self.launch_tube_length, self.distance_from_origin) * self.nozzle_area
-        # print (f'Volume Lost: water={1000*water_volume_lost:0.03f}l, launch pipe:{1000*launch_pipe_volume_lost:0.03f}l')
-        self.state[1, 0] = self.pressure_0 * ( (self.volume_0 + water_volume_lost + launch_pipe_volume_lost) / self.volume_0 ) ** -self.gamma
+        self.state[1, 0] = pressure_after_adiabatic_expansion(
+            starting_pressure=self.pressure_0,
+            starting_gas_volume=self.volume_0,
+            current_gas_volume=self.volume_0 + water_volume_lost + launch_pipe_volume_lost,
+        )
 
-        next_state = self.state + self.timestep * self.fun()
-
-        next_mass = next_state[0, 0]
-        if next_mass < self.dry_mass:
+        if mass < self.dry_mass:
             return None
 
-        self.state = next_state
         self.t += self.timestep
 
         return self.t
