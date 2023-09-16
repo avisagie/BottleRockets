@@ -7,7 +7,8 @@ from collections import namedtuple
 from physics import pressure_after_adiabatic_expansion
 import scipy.integrate as spi
 from scipy.optimize import brentq
-from bottle_shapes import simple_bottle
+from bottle_shapes import get_bottle_helper
+from icecream import ic
 
 # Assume it's constant for the flight and use dry air, which is more dense than humid air.
 # https://en.wikipedia.org/wiki/Density_of_air
@@ -67,8 +68,6 @@ class WaterThruster():
         self.A_out = nozzle_profile(0)
 
         self.u_out = 0
-        self.d_u_out = 0
-
 
     @staticmethod
     def _distance_from_nozzle(A : Callable,starting_volume : float):
@@ -91,37 +90,43 @@ class WaterThruster():
         ratio = self.A_out/self.A(z_H)
         return (ratio**2 - 1.0) / 2.0
     
-    def step(self,P_gauge : float,d_t : float) -> Tuple[float,float]:
+    def step(self,P_gauge : float,d_t : float, acceleration : np.ndarray) -> Tuple[float,float]:
         """
         Returns thrust and mass of water ejected for one time step.
         Requires current gauge pressure (absolute - atmospheric)
         """
         if self.z_H <= 0:
             return 0,0
-        print(self._average_nozzle_to_body_ratio(self.z_H))
-        inertial_inertia_part = self._average_nozzle_to_body_ratio(self.z_H) * self.d_u_out/d_t
-        speed_2 = - (P_gauge/water_density + inertial_inertia_part) / self._squared_boundary_ratio (self.z_H)
-        #TODO: add (a + g)H and F_int
 
-        # Current config is unstable
-        # TODO: rewrite to solve du/dt in stead of u
-        speed_2 = max(0,speed_2)
-        u_new = -1.0 * speed_2**0.5
-        self.d_u_out = u_new - self.u_out
-        self.u_out = u_new
+        B_H = self._average_nozzle_to_body_ratio(self.z_H)
+        C_H = self._squared_boundary_ratio (self.z_H)
+        a =  np.linalg.norm(acceleration)
 
-        F = water_density * self.A_out * speed_2
-        
+        if numerically_stable := B_H > d_t*100:
+            du_dt = - (C_H*self.u_out**2 + P_gauge/water_density + a*self.z_H)/B_H 
+
+            du = du_dt*d_t
+            self.u_out += du
+            ic(numerically_stable)
+
+        else:
+            self.u_out = -(-(P_gauge/water_density + a*self.z_H)/C_H)**(0.5)
+            du_dt = 0
+
+        F_thrust = water_density * self.A_out * self.u_out**2
+        F_internal = -water_density*self.A_out*(self.z_H*du_dt + self.A_out/self.A(self.z_H)*self.u_out**2)
+
+        F_tot = F_thrust + F_internal
         # compute how far the water boundary moved
         A_H = self.A(self.z_H)
-        d_H_dt = (self.A_out * u_new)/A_H
+        d_H_dt = (self.A_out * self.u_out)/A_H
         d_H = d_H_dt*d_t
         self.z_H += d_H
 
         ejected_mass = abs(d_H*A_H*water_density)
-        print(f"H : {self.z_H:.3f}, U : {u_new:.3f}, F : {F:.3f}, kdu/dt : {inertial_inertia_part:.3f}")
+        ic(du_dt,self.u_out,F_internal)
 
-        return F,ejected_mass
+        return F_tot,ejected_mass
 
 
 class Ballistic(Phase):
@@ -279,7 +284,7 @@ class BoostScienceBits(Phase):
         mass = self.state[2][0]
         water_volume_lost = (self.mass_0 - mass)/water_density
         # print(f'Volume lost: water={1000*water_volume_lost:0.3f}l')
-        next_pressure = pressure_after_adiabatic_expansion(
+        next_pressure = pressure_after_adiabatic_expansion( 
             starting_pressure=self.pressure_0,
             starting_gas_volume=self.volume_0,
             current_gas_volume=self.volume_0 + water_volume_lost,
@@ -314,7 +319,8 @@ class BoosterScienceBits():
                  C_drag, A_cross_sectional_area, nozzle_radius, # in meters
                  launch_tube_length = 0.0, # m. Assumes that the launch tube fits snuggly and has no friction
                  removable = True,
-                 timestep = 0.001):
+                 timestep = 0.001,
+                 bottle_shape = "simple"):
         # (mass and pressure are vectors in case I want to use scipy integrators)
         mass = dry_mass + water/1000 * water_density # 1l = 0.001m^3
         self.state = np.array([[mass], [pressure]])
@@ -337,8 +343,10 @@ class BoosterScienceBits():
 
         self.__removable = removable
 
-        nozzle_profile = simple_bottle(nozzle_radius,(A_cross_sectional_area/np.pi)**0.5)
+        bottle_radius = (A_cross_sectional_area/np.pi)**0.5
+        nozzle_profile = get_bottle_helper(bottle_shape,nozzle_radius,bottle_radius)
         self.thruster = WaterThruster(nozzle_profile=nozzle_profile,starting_water_volume=water/1000)
+        self.f_thrust = 0
 
 
     def position(self):
@@ -358,13 +366,7 @@ class BoosterScienceBits():
 
 
     def F_thrust(self):
-        pressure = self.state[1, 0]
-        if self.in_launch_tube_phase:
-            return self.nozzle_area * pressure # https://www.et.byu.edu/~wheeler/benchtop/pix/thrust_eqns.pdf Section III
-        else:
-            F,d_mass = self.thruster.step(pressure,self.timestep)
-            self.state[0, 0] -= d_mass
-            return F
+        return self.f_thrust
 
     
     def mass(self):
@@ -380,13 +382,21 @@ class BoosterScienceBits():
         self.distance_from_origin = distance_from_origin
 
 
-    def step(self):
+    def step(self,acceleration):
         """
         Step the system one step forward.
         Return: t, position, velocity or None if the water's run out
         """
 
-        # Update pressure here. TODO rewrite the equation to fit in fun.
+        pressure = self.state[1, 0]
+        if self.in_launch_tube_phase:
+            self.f_thrust = self.nozzle_area * pressure # https://www.et.byu.edu/~wheeler/benchtop/pix/thrust_eqns.pdf Section III
+            d_mass = 0
+        else:
+            F,d_mass = self.thruster.step(pressure,self.timestep,acceleration)
+            self.state[0, 0] -= d_mass
+            self.f_thrust = F
+        
         mass = self.mass()
         water_volume_lost = (self.mass_0 - mass)/water_density
         launch_pipe_volume_lost = min(self.launch_tube_length, self.distance_from_origin) * self.nozzle_area
@@ -497,7 +507,7 @@ class RocketWithComponents(Phase):
         dsdt = velocity
 
         if not self.validate(speed2):
-            raise Exception("It broke apart")
+            raise Exception("It broke apart ")
 
         return np.array([dsdt, dvdt])
 
@@ -513,7 +523,7 @@ class RocketWithComponents(Phase):
 
         done = []
         for c in self.components:
-            step = c.step()
+            step = c.step(self.acceleration)
             if step is None:
                 done.append(c)
 
