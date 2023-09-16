@@ -31,7 +31,8 @@ def sim_3_boosters(
 
     timestep = 0.001,
 
-    number_of_boosters = 3
+    number_of_boosters = 3,
+    bottle_shape = "taper_60",
     ):
 
     stepper = Stepper()
@@ -48,7 +49,8 @@ def sim_3_boosters(
                                     A_cross_sectional_area=pi*booster_radius**2, 
                                     nozzle_radius=booster_nozzle_radius, 
                                     launch_tube_length=booster_launch_tube_length,
-                                    timestep=timestep) for x in range(number_of_boosters)]
+                                    timestep=timestep,
+                                    bottle_shape=bottle_shape) for x in range(number_of_boosters)]
 
     center = BoosterScienceBits( t0=0, 
                                  water=water_l,
@@ -59,7 +61,8 @@ def sim_3_boosters(
                                  A_cross_sectional_area=pi*radius**2 + extra_frontal_surface, 
                                  nozzle_radius=nozzle_radius, 
                                  launch_tube_length=launch_tube_length,
-                                 timestep=timestep )
+                                 timestep=timestep,
+                                 bottle_shape=bottle_shape)
 
     def validate(speed2):
         # TODO revisit, and make sure it gets called
@@ -67,8 +70,8 @@ def sim_3_boosters(
         a_center = (center.F_thrust() + center.F_drag(speed2)) / center.mass()
         for booster in boosters: # redundant because they're identical
             a_booster = (booster.F_thrust() + booster.F_drag(speed2)) / booster.mass()
-            if a_booster < a_center:
-                return False
+            if (a_booster - a_center) < -1e4:
+                raise RuntimeError(f"c thrust: {center.F_thrust()}, b thrust: {booster.F_thrust()}, {a_center,a_booster}")
         return True
 
     phase = RocketWithComponents(position, position, 0.001*np.array([cos(deg2rad(theta)), sin(deg2rad(theta))]), 0.0, 
@@ -112,7 +115,8 @@ def sim_3_boosters_bullet(
     theta = 45, # degrees
     rail_length = 1.5, # m
 
-    timestep = 0.001
+    timestep = 0.001,
+    bottle_shape = "taper_60",
     ):
 
     """
@@ -136,7 +140,8 @@ def sim_3_boosters_bullet(
                                     A_cross_sectional_area=pi*booster_radius**2, 
                                     nozzle_radius=booster_nozzle_radius, 
                                     launch_tube_length=booster_launch_tube_length,
-                                    timestep=timestep) for x in range(3)]
+                                    timestep=timestep,
+                                    bottle_shape=bottle_shape) for x in range(3)]
 
     phase = RocketWithComponents(position, position, 0.001*np.array([cos(deg2rad(theta)), sin(deg2rad(theta))]), 0.0, 
         components=boosters, 
@@ -159,7 +164,8 @@ def sim_3_boosters_bullet(
                                  A_cross_sectional_area=pi*radius**2, 
                                  nozzle_radius=nozzle_radius, 
                                  launch_tube_length=launch_tube_length,
-                                 timestep=timestep )
+                                 timestep=timestep,
+                                 bottle_shape=bottle_shape)
 
     phase = RocketWithComponents(position, position, velocity, time, 
         components=[bullet], 
@@ -210,7 +216,8 @@ def sim_3_stage(
     theta = 45, # degrees
     rail_length = 3, # m
 
-    timestep = 0.001
+    timestep = 0.001,
+    bottle_shape = "taper_60",
     ):
 
     """
@@ -237,7 +244,8 @@ def sim_3_stage(
                                  A_cross_sectional_area=pi*s1_radius**2, 
                                  nozzle_radius=s1_nozzle_radius, 
                                  launch_tube_length=1.0,
-                                 timestep=timestep )
+                                 timestep=timestep,
+                                 bottle_shape=bottle_shape)
 
     phase = RocketWithComponents(position, position, velocity, time, 
         components=[stage1], 
@@ -261,7 +269,8 @@ def sim_3_stage(
                                  A_cross_sectional_area=pi*s2_radius**2, 
                                  nozzle_radius=s2_nozzle_radius, 
                                  launch_tube_length=0.0,
-                                 timestep=timestep )
+                                 timestep=timestep,
+                                 bottle_shape=bottle_shape)
 
     phase = RocketWithComponents(phase.position(), phase.position(), phase.velocity(), phase.t, 
         components=[stage2], 
@@ -281,7 +290,8 @@ def sim_3_stage(
                                  A_cross_sectional_area=pi*s3_radius**2, 
                                  nozzle_radius=s3_nozzle_radius, 
                                  launch_tube_length=0.0,
-                                 timestep=timestep )
+                                 timestep=timestep,
+                                 bottle_shape=bottle_shape)
 
     phase = RocketWithComponents(phase.position(), phase.position(), phase.velocity(), phase.t, 
         components=[stage3], 
@@ -319,7 +329,8 @@ def sim1(
 
     extra_frontal_surface = 0.0, # m^2, for things like fins.
 
-    timestep = 0.001
+    timestep = 0.001,
+    bottle_shape = "taper_60",
     ):
 
     stepper = Stepper()
@@ -335,7 +346,9 @@ def sim1(
                                  A_cross_sectional_area=pi*radius**2 + extra_frontal_surface, 
                                  nozzle_radius=nozzle_radius, 
                                  launch_tube_length=launch_tube_length,
-                                 timestep=timestep )
+                                 timestep=timestep,
+                                 bottle_shape=bottle_shape,
+                                 )
 
     launcher_origin = np.array([0,0.3])
     phase = RocketWithComponents(position, position, 0.001*np.array([cos(deg2rad(theta)), sin(deg2rad(theta))]), 0.0, 
@@ -364,7 +377,7 @@ def plot_basic(traces : Traces):
     max_speed = max(speed)
     max_acceleration = max(sqrt(np.sum(acceleration * acceleration, axis=1)))
 
-    print(position)
+    # print(position)
 
     ax1 = pylab.subplot(211)
     ax1.plot(time, accel, 'b')
@@ -382,6 +395,7 @@ def plot_basic(traces : Traces):
     ax1.grid()
     ax1.set_xlabel("Horizontal distance (m)")
 
+    pylab.savefig("new.png")
     pylab.show()
 
 
