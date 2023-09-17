@@ -32,8 +32,8 @@ if __name__ == "__main__":
 
         extra_frontal_surface = num_fins * fin_length * fin_thickness,
 
-        timestep = 0.00001,
-        bottle_shape="taper_60"
+        timestep = 0.001,
+        bottle_shape="naive"
     )
 
     time, position, velocity, acceleration = traces

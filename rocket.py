@@ -93,7 +93,7 @@ class WaterThruster():
     def step(self,P_gauge : float,d_t : float, acceleration : np.ndarray) -> Tuple[float,float]:
         """
         Returns thrust and mass of water ejected for one time step.
-        Requires current gauge pressure (absolute - atmospheric)
+        Requires current gauge pressure (absolute - atmospheric) and acceleration of the thruster
         """
         if self.z_H <= 0:
             return 0,0
@@ -126,6 +126,17 @@ class WaterThruster():
         ejected_mass = abs(d_H*A_H*water_density)
         ic(du_dt,self.u_out,F_internal)
 
+        return F_tot,ejected_mass
+    
+class NaiveWaterThruster:
+    def __init__(self,nozzle_radius : float):
+        self.A_out = np.pi*nozzle_radius**2
+
+    def step(self,P_gauge : float,d_t : float, acceleration : np.ndarray):
+        F_tot = 2.0*P_gauge*self.A_out
+
+        dm_dt = self.A_out * water_density * sqrt(2 * P_gauge / water_density)
+        ejected_mass = dm_dt*d_t
         return F_tot,ejected_mass
 
 
@@ -343,9 +354,13 @@ class BoosterScienceBits():
 
         self.__removable = removable
 
-        bottle_radius = (A_cross_sectional_area/np.pi)**0.5
-        nozzle_profile = get_bottle_helper(bottle_shape,nozzle_radius,bottle_radius)
-        self.thruster = WaterThruster(nozzle_profile=nozzle_profile,starting_water_volume=water/1000)
+        if bottle_shape == "naive":
+            self.thruster = NaiveWaterThruster(nozzle_radius)
+        else:
+            bottle_radius = (A_cross_sectional_area/np.pi)**0.5
+            nozzle_profile = get_bottle_helper(bottle_shape,nozzle_radius,bottle_radius)
+            self.thruster = WaterThruster(nozzle_profile=nozzle_profile,starting_water_volume=water/1000)
+
         self.f_thrust = 0
 
 
@@ -517,10 +532,6 @@ class RocketWithComponents(Phase):
         Step the system one step forward.
         Return: t, position, velocity or None if the water's run out
         """
-
-        self.state = self.state + self.timestep * self.fun() 
-        self.t += self.timestep
-
         done = []
         for c in self.components:
             step = c.step(self.acceleration)
@@ -536,6 +547,9 @@ class RocketWithComponents(Phase):
 
         if not self.components:
             return None
+        
+        self.state = self.state + self.timestep * self.fun() 
+        self.t += self.timestep
 
         return self.t, self.position(), self.velocity()
 

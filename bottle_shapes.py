@@ -31,7 +31,7 @@ def simple_bottle(nozzle_radius,body_radius) -> Callable:
         
     return simple_profile
 
-def naive_bottle(nozzle_radius):
+def infinite_bottle(nozzle_radius):
     """
     Assumes the body radius is much larger than the nozzle radius.
     This means there is no water flow to the bottle except
@@ -91,8 +91,8 @@ def triangular_bottle(nozzle_radius,body_radius,taper_angle):
 def get_bottle_helper(type_of_bottle : str,nozzle_radius,body_radius) -> Callable:
     if type_of_bottle == "simple":
         return simple_bottle(nozzle_radius,body_radius)
-    elif type_of_bottle == "naive":
-        return naive_bottle(nozzle_radius)
+    elif type_of_bottle == "infinite":
+        return infinite_bottle(nozzle_radius)
     elif type_of_bottle == "taper_60":
         return triangular_bottle(nozzle_radius,body_radius,np.deg2rad(90.0 - 60.0))
     elif type_of_bottle == "taper_45":
