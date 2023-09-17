@@ -32,7 +32,7 @@ def sim_3_boosters(
     timestep = 0.001,
 
     number_of_boosters = 3,
-    bottle_shape = "taper_60",
+    bottle_shape = "naive",
     ):
 
     stepper = Stepper()
@@ -116,7 +116,7 @@ def sim_3_boosters_bullet(
     rail_length = 1.5, # m
 
     timestep = 0.001,
-    bottle_shape = "taper_60",
+    bottle_shape = "naive",
     ):
 
     """
@@ -217,7 +217,7 @@ def sim_3_stage(
     rail_length = 3, # m
 
     timestep = 0.001,
-    bottle_shape = "taper_60",
+    bottle_shape = "naive",
     ):
 
     """
@@ -330,7 +330,7 @@ def sim1(
     extra_frontal_surface = 0.0, # m^2, for things like fins.
 
     timestep = 0.001,
-    bottle_shape = "taper_60",
+    bottle_shape = "naive",
     ):
 
     stepper = Stepper()
