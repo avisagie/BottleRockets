@@ -348,9 +348,6 @@ class BoosterScienceBits():
         self.timestep = timestep
 
         self.launch_tube_length = max(0.0, launch_tube_length)
-        self.distance_from_origin = 0.0
-
-        self.in_launch_tube_phase = launch_tube_length > 0.0
 
         self.__removable = removable
 
@@ -388,23 +385,14 @@ class BoosterScienceBits():
         mass = self.state[0, 0]
         return mass
 
-
-    def launch_tube_phase(self, distance_from_origin):
-        in_launch_tube_phase = distance_from_origin < self.launch_tube_length
-        if self.in_launch_tube_phase and not in_launch_tube_phase:
-            if verbose: print(f"Distance:{distance_from_origin}, time:{self.t:0.03f}s, off the launch tube.")
-        self.in_launch_tube_phase = in_launch_tube_phase
-        self.distance_from_origin = distance_from_origin
-
-
-    def step(self,acceleration):
+    def step(self,acceleration,distance_from_origin) -> bool:
         """
         Step the system one step forward.
-        Return: t, position, velocity or None if the water's run out
+        Return: True if the booster is done, else False
         """
-
+        in_launch_tube_phase = distance_from_origin < self.launch_tube_length
         pressure = self.state[1, 0]
-        if self.in_launch_tube_phase:
+        if in_launch_tube_phase:
             self.f_thrust = self.nozzle_area * pressure # https://www.et.byu.edu/~wheeler/benchtop/pix/thrust_eqns.pdf Section III
             d_mass = 0
         else:
@@ -414,19 +402,15 @@ class BoosterScienceBits():
         
         mass = self.mass()
         water_volume_lost = (self.mass_0 - mass)/water_density
-        launch_pipe_volume_lost = min(self.launch_tube_length, self.distance_from_origin) * self.nozzle_area
+        launch_pipe_volume_lost = min(self.launch_tube_length, distance_from_origin) * self.nozzle_area
         self.state[1, 0] = pressure_after_adiabatic_expansion(
             starting_pressure=self.pressure_0,
             starting_gas_volume=self.volume_0,
             current_gas_volume=self.volume_0 + water_volume_lost + launch_pipe_volume_lost,
         )
 
-        if mass < self.dry_mass:
-            return None
-
-        self.t += self.timestep
-
-        return self.t
+        done = True if mass < self.dry_mass else False
+        return done
 
 class RocketWithComponents(Phase):
 
@@ -494,16 +478,13 @@ class RocketWithComponents(Phase):
 
         F_drag = self.F_drag(speed2)
 
-        distance_from_origin = sqrt(sum((self.origin - self.position()) * (self.origin - self.position())))
+        distance_from_origin = np.linalg.norm(self.origin - self.position())
 
         # while it's on the rail, just get the component of gravity backwards along the rail
         if distance_from_origin > self.rail_length:
             a_grav = -np.array([0, 9.81])
-            for c in self.components: c.launch_tube_phase(distance_from_origin)
         else:
             a_grav = np.dot(-np.array([0, 9.81]), direction) * direction
-            for c in self.components: c.launch_tube_phase(distance_from_origin)
-
 
         # Assumption: It thrusts in the same direction as it's flying. 
         # It points in the direction that it's pointing. 
@@ -534,8 +515,8 @@ class RocketWithComponents(Phase):
         """
         done = []
         for c in self.components:
-            step = c.step(self.acceleration)
-            if step is None:
+            dist = np.linalg.norm(self.origin - self.position())
+            if c.step(self.acceleration,distance_from_origin = dist):
                 done.append(c)
 
         for d in done:            
