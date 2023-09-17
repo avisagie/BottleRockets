@@ -331,12 +331,10 @@ def sim1(
 
     timestep = 0.001,
     bottle_shape = "naive",
+    windspeed = 0.0
     ):
 
-    stepper = Stepper()
-
-    position = np.array([0, 0.1])
-    
+    stepper = Stepper()    
     center = BoosterScienceBits( t0=0, 
                                  water=water_l,
                                  pressure=bar2pa(pressure), 
@@ -350,11 +348,12 @@ def sim1(
                                  bottle_shape=bottle_shape,
                                  )
 
-    launcher_origin = np.array([0,0.3])
-    phase = RocketWithComponents(position, position, 0.001*np.array([cos(deg2rad(theta)), sin(deg2rad(theta))]), 0.0, 
+    phase = RocketWithComponents(np.zeros(2), np.zeros(2), np.zeros(2), 0.0, 
         components=[center], 
-        rail_length=rail_length, 
-        timestep=timestep  
+        rail_length=rail_length,
+        rail_angle=theta, 
+        timestep=timestep,
+        windspeed = windspeed,
     )
 
     stepper.step(phase)

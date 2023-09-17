@@ -27,13 +27,14 @@ if __name__ == "__main__":
         nozzle_radius = 0.011,
         launch_tube_length = 1.0, # m
 
-        theta = 45, # degrees
+        theta = 40, # degrees
         rail_length = 1.0, # m
 
         extra_frontal_surface = num_fins * fin_length * fin_thickness,
 
         timestep = 0.001,
-        bottle_shape="naive"
+        bottle_shape="naive",
+        windspeed=1e-6,
     )
 
     time, position, velocity, acceleration = traces

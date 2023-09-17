@@ -306,8 +306,10 @@ class RocketWithComponents(Phase):
     def __init__(self, position, origin, velocity, t0,
                  components,
                  rail_length = 0.0,
+                 rail_angle = 45,
                  validate = always_happy, # tell if this system holds together
-                 timestep = 0.001):
+                 timestep = 0.001,
+                 windspeed = 0.0):
         # (mass and pressure are vectors in case I want to use scipy integrators)
         self.state = np.array([position, velocity]) 
         self.t = t0
@@ -315,7 +317,9 @@ class RocketWithComponents(Phase):
         self.acceleration = 0.0
         self.components = components
         self.rail_length = rail_length
+        self.rail_direction = np.array([cos(np.deg2rad(rail_angle)), sin(np.deg2rad(rail_angle))])
         self.origin = origin
+        self.windspeed = windspeed
 
         self.validate = validate
 
@@ -358,39 +362,42 @@ class RocketWithComponents(Phase):
         """
 
         velocity = self.velocity()
-        speed2 = np.sum(velocity * velocity) # scalar
-        direction = 1/sqrt(speed2) * velocity # vector
+        air_velocity = velocity - np.array([self.windspeed,0.0])
+        air_speed2 = np.sum(air_velocity * air_velocity)
+        airflow_direction = air_velocity/sqrt(air_speed2)# vector
 
-        F_drag = self.F_drag(speed2)
-
+        F_drag = self.F_drag(air_speed2)
         distance_from_origin = np.linalg.norm(self.origin - self.position())
+        mass = self.mass()
 
-        # while it's on the rail, just get the component of gravity backwards along the rail
+        # while it's on the rail, just get the component of gravity and drag along the rail
         if distance_from_origin > self.rail_length:
+            direction = airflow_direction
             a_grav = -np.array([0, 9.81])
+            a_drag = 1/mass * F_drag * direction
         else:
+            direction = self.rail_direction
             a_grav = np.dot(-np.array([0, 9.81]), direction) * direction
+            a_drag = 1/mass * F_drag * airflow_direction
+            a_drag = np.dot(a_drag,direction) * direction
+            ic(a_drag,airflow_direction)
+
 
         # Assumption: It thrusts in the same direction as it's flying. 
         # It points in the direction that it's pointing. 
         # I.e. aerodynamically stable and perfectly responsive.
         F_thrust = self.F_thrust()
-
-        mass = self.mass()
-
         # print(f'{self.t:0.03f}s: {F_thrust}, {F_drag}, {mass}kg')
 
         a_thrust = 1/mass * F_thrust * direction
-        a_drag = 1/mass * F_drag * direction
+        
         dvdt = a_drag + a_grav + a_thrust
         self.acceleration = dvdt
 
-        dsdt = velocity
-
-        if not self.validate(speed2):
+        if not self.validate(air_speed2):
             raise Exception("It broke apart ")
 
-        return np.array([dsdt, dvdt])
+        return np.array([velocity, dvdt])
 
 
     def step(self):
@@ -438,7 +445,7 @@ class Stepper:
 
         altitude = phase.position()[1]
 
-        while altitude > 0.0:
+        while altitude >= 0.0:
 
             ret = phase.step()
             if ret is None:
