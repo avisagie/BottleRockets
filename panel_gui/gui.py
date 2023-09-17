@@ -21,6 +21,19 @@ simulation_results = []
 simulation_display = pn.pane.Plotly(sizing_mode="stretch_both")
 error_display = pn.pane.Alert("Ready",alert_type = "success")
 
+description = pn.pane.Markdown("""
+## Bottle Rocket Simulator
+`TBD: add description of fields`
+For more accurate water simulation set bottle_shape to one of:
+- `infinite` : similar to naive but uses different method
+- `simple` : assumes square bottle
+- `taper_45`: bottle has a 45 degree tapered end
+- `taper_60`: longer tapered end than taper_45
+
+NOTE: Its important to select a smaller timestep when using one of the above. 
+These shapes are only for simulating the flow of water inside the bottle and not drag.
+""")
+
 
 def update_display():
     if len(simulation_results) == 1:
@@ -60,5 +73,5 @@ def create_simulator_pane(simulator: SimulatorTemplate):
 
 tabs = [tuple(create_simulator_pane(sim)) for sim in get_simulators()]
 tabs = pn.Tabs(*tabs)
-main_row = pn.Row(tabs, pn.Column(error_display,simulation_display))
+main_row = pn.Row(tabs, pn.Column(description,error_display,simulation_display))
 main_row.servable()
