@@ -33,6 +33,7 @@ def sim_3_boosters(
 
     number_of_boosters = 3,
     bottle_shape = "naive",
+    windspeed = 0.0,
     ):
 
     stepper = Stepper()
@@ -78,7 +79,8 @@ def sim_3_boosters(
         components=list(chain(boosters, [center])), 
         rail_length=rail_length, 
         validate=validate, 
-        timestep=timestep  
+        timestep=timestep,
+        windspeed = windspeed,  
     )
 
     stepper.step(phase)
@@ -117,6 +119,7 @@ def sim_3_boosters_bullet(
 
     timestep = 0.001,
     bottle_shape = "naive",
+    windspeed = 0.0,
     ):
 
     """
@@ -146,7 +149,8 @@ def sim_3_boosters_bullet(
     phase = RocketWithComponents(position, position, 0.001*np.array([cos(deg2rad(theta)), sin(deg2rad(theta))]), 0.0, 
         components=boosters, 
         rail_length=rail_length, 
-        timestep=timestep  
+        timestep=timestep,
+        windspeed = windspeed,  
     )
 
     stepper.step(phase)
@@ -170,7 +174,8 @@ def sim_3_boosters_bullet(
     phase = RocketWithComponents(position, position, velocity, time, 
         components=[bullet], 
         rail_length=0.0, 
-        timestep=timestep  
+        timestep=timestep,
+        windspeed = windspeed,  
     )
 
     stepper.step(phase)
@@ -218,6 +223,7 @@ def sim_3_stage(
 
     timestep = 0.001,
     bottle_shape = "naive",
+    windspeed = 0.0,
     ):
 
     """
@@ -250,7 +256,8 @@ def sim_3_stage(
     phase = RocketWithComponents(position, position, velocity, time, 
         components=[stage1], 
         rail_length=0.0, 
-        timestep=timestep  
+        timestep=timestep,
+        windspeed = windspeed,  
     )
 
     # print(f'Starting stage 1 at {phase.t:0.003}s')
@@ -275,7 +282,8 @@ def sim_3_stage(
     phase = RocketWithComponents(phase.position(), phase.position(), phase.velocity(), phase.t, 
         components=[stage2], 
         rail_length=0.0, 
-        timestep=timestep  
+        timestep=timestep,
+        windspeed = windspeed,  
     )
 
     # print(f'Starting stage 2 at {phase.t:0.003}s')
@@ -296,7 +304,8 @@ def sim_3_stage(
     phase = RocketWithComponents(phase.position(), phase.position(), phase.velocity(), phase.t, 
         components=[stage3], 
         rail_length=0.0, 
-        timestep=timestep  
+        timestep=timestep,
+        windspeed = windspeed,  
     )
 
     # print(f'Starting stage 3 at {phase.t:0.003}s')
