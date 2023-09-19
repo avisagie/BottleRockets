@@ -311,7 +311,7 @@ class RocketWithComponents(Phase):
                  timestep = 0.001,
                  windspeed = 0.0):
         # (mass and pressure are vectors in case I want to use scipy integrators)
-        self.state = np.array([position, velocity]) 
+        self.state = np.array([position, velocity + 1e-7]) 
         self.t = t0
         self.timestep = timestep
         self.acceleration = 0.0
