@@ -76,7 +76,7 @@ class WaterThruster():
             volume,_ = spi.quad(A,0,z)
             return volume - starting_volume
         
-        z_0 = brentq(volume_difference, 0, 10)
+        z_0 : float = brentq(volume_difference, 0, 10) # type: ignore
         return z_0
     
     def _average_nozzle_to_body_ratio(self, z_H):
@@ -100,7 +100,7 @@ class WaterThruster():
 
         B_H = self._average_nozzle_to_body_ratio(self.z_H)
         C_H = self._squared_boundary_ratio (self.z_H)
-        a =  np.linalg.norm(acceleration)
+        a = np.linalg.norm(acceleration)
 
         if numerically_stable := B_H > d_t*100:
             du_dt = - (C_H*self.u_out**2 + P_gauge/water_density + a*self.z_H)/B_H 
@@ -324,11 +324,11 @@ class RocketWithComponents(Phase):
         self.validate = validate
 
     @property
-    def components(self) -> BoosterScienceBits:
+    def components(self) -> list[BoosterScienceBits]:
         return self._components
 
     @components.setter
-    def components(self,values):
+    def components(self,values : list[BoosterScienceBits]):
         if not isinstance(values,list):
             values = [values]
 
