@@ -34,7 +34,6 @@ NOTE: Its important to select a smaller timestep when using one of the above.
 These shapes are only for simulating the flow of water inside the bottle and not drag.
 """)
 
-
 def update_display():
     if len(simulation_results) == 1:
         simulation_display.object = plot_single_trace(
@@ -71,7 +70,10 @@ def create_simulator_pane(simulator: SimulatorTemplate):
     return simulator.name, pane
 
 
+
+clear_simulations_button = pn.widgets.Button(name="clear")
+clear_simulations_button.on_click(lambda e:simulation_results.clear())
 tabs = [tuple(create_simulator_pane(sim)) for sim in get_simulators()]
 tabs = pn.Tabs(*tabs)
-main_row = pn.Row(tabs, pn.Column(description,error_display,simulation_display))
+main_row = pn.Row(tabs, pn.Column(description,error_display,simulation_display,clear_simulations_button))
 main_row.servable()
