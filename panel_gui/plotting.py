@@ -11,6 +11,7 @@ def create_scatter_plots_from_trace(name, trace: Traces):
     pos = go.Scatter(
         x=trace.position[:, 0],
         y=trace.position[:, 1],
+        hovertext = [f"{time:.2f}s" for time in trace.time],
         name=name + " position",
     )
 
