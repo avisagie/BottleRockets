@@ -4,8 +4,12 @@ import numpy as np
 import plotly.express as px
 from icecream import ic
 from pathlib import Path
+from scipy import signal
 
 def read_video(video_file : str) -> np.ndarray:
+    if not Path(video_file).is_file():
+        raise ValueError(f"Video file {video_file} not found.")
+
     cap = cv.VideoCapture(video_file)
     frames = []
     hsv_frames = []
@@ -160,16 +164,22 @@ def estimate_realworld_motion(track : np.ndarray, delta_time_seconds : float, pi
 
     dt = np.diff(time)
     dxdy = np.diff(track,axis=0)
-    velocity = np.linalg.norm(dxdy,axis=1)/dt
-    acceleration = np.diff(velocity)
+    speed = np.linalg.norm(dxdy,axis=1)/dt
+    acceleration = np.diff(speed)
 
-    return track,time,velocity,acceleration
+    return track,time,speed,acceleration
+
+def smooth_speed_estimate(speed : np.ndarray, delta_time_seconds) ->np.ndarray:
+    a,b = signal.butter(N=2,Wn=1000,fs=1.0/delta_time_seconds)
+    smoothed_speed = signal.lfilter(a,b,speed)
+    return smoothed_speed
+
 
 #%%
         
 if __name__ == "__main__":
     # %%
-    media_folder = "/mnt/c/Users/bottlerocket/"
+    media_folder = "/mnt/c/bottlerocket/"
     video_file = "single_bottle.mp4"
     frames= read_video(media_folder + video_file)
 
@@ -192,5 +202,15 @@ if __name__ == "__main__":
     output_file = "final.mp4"
     save_color_video(media_folder + output_file,frames)
     #%%
-    track,time,velocity,acceleration = estimate_realworld_motion(track,0.01,0.01)
+    delta_time_seconds = 1.0/240.0
+    track,time,speed,acceleration = estimate_realworld_motion(track,delta_time_seconds,726.0/55.0/1000.0)
 
+    #%%
+    subset_speed = speed[16:106]
+    subset_speed = np.pad(subset_speed,(20,20),'edge')
+    a,b = signal.butter(N=2,Wn=20,fs=1.0/delta_time_seconds)
+    smoothed_speed = signal.filtfilt(a,b,subset_speed)
+    px.line(y=[smoothed_speed,subset_speed])
+
+    #%%
+    px.line(np.diff(smoothed_speed))

@@ -12,8 +12,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     path_to_video = Path(args.filename)
-    if not (path_to_video.exists() and path_to_video.is_file()):
-        raise ValueError(f"Video file {path_to_video} not found.")
     print("Loading video")
     frames = read_video(str(path_to_video.absolute()))
     frame_index = args.frame_index if args.frame_index is not None else len(frames//2)
