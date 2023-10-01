@@ -5,6 +5,10 @@ import plotly.express as px
 from icecream import ic
 from pathlib import Path
 from scipy import signal
+from rocket import (
+    Traces,
+    save_traces
+)
 
 def read_video(video_file : str) -> np.ndarray:
     if not Path(video_file).is_file():
@@ -154,7 +158,7 @@ def add_track_and_contours(video_frames : np.ndarray, track : np.ndarray, contou
         for point in track[:i]:
             frame = cv.circle(frame,point.astype(np.uint),3,(0,0,255))
 
-def estimate_realworld_motion(track : np.ndarray, delta_time_seconds : float, pixel_width_meters : float):
+def estimate_realworld_motion(track : np.ndarray, delta_time_seconds : float, pixel_width_meters : float) -> Traces:
     time = np.arange(len(track))*delta_time_seconds
     track = track*pixel_width_meters
 
@@ -162,55 +166,32 @@ def estimate_realworld_motion(track : np.ndarray, delta_time_seconds : float, pi
     time = time[~is_inf]
     track = track[~is_inf]
 
-    dt = np.diff(time)
+    dt = np.expand_dims(np.diff(time),-1)
     dxdy = np.diff(track,axis=0)
-    speed = np.linalg.norm(dxdy,axis=1)/dt
-    acceleration = np.diff(speed)
+    velocity = dxdy/dt
+    acceleration = np.diff(velocity)
+    traces = Traces(time = time,position=track,velocity=velocity,acceleration=acceleration)
 
-    return track,time,speed,acceleration
+    return traces
 
-def smooth_speed_estimate(speed : np.ndarray, delta_time_seconds) ->np.ndarray:
-    a,b = signal.butter(N=2,Wn=1000,fs=1.0/delta_time_seconds)
-    smoothed_speed = signal.lfilter(a,b,speed)
-    return smoothed_speed
-
-
-#%%
-        
+  
 if __name__ == "__main__":
     # %%
     media_folder = "/mnt/c/bottlerocket/"
     video_file = "single_bottle.mp4"
     frames= read_video(media_folder + video_file)
 
-    #%%
-    #red diff
     red_frames = frames.astype(int)
     red_frames = np.clip(red_frames[:,:,:,2] - red_frames[:,:,:,0] - red_frames[:,:,:,1],a_min=0,a_max=255)
     red_diff = np.diff(red_frames,axis=0)
     red_clamped = clamp(red_diff,0.1)
-    #%%
-    test_frame = red_clamped[50]
-    contours,hierarchy = cv.findContours(test_frame,cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    show(cv.drawContours(np.array(test_frame), contours, -1, (255,255,255), 1))
-    #%%
     contours,track = track_largest_blob(red_clamped)
 
-    #%%
     add_track_and_contours(frames,track,contours)
 
     output_file = "final.mp4"
     save_color_video(media_folder + output_file,frames)
-    #%%
+
     delta_time_seconds = 1.0/240.0
-    track,time,speed,acceleration = estimate_realworld_motion(track,delta_time_seconds,726.0/55.0/1000.0)
-
-    #%%
-    subset_speed = speed[16:106]
-    subset_speed = np.pad(subset_speed,(20,20),'edge')
-    a,b = signal.butter(N=2,Wn=20,fs=1.0/delta_time_seconds)
-    smoothed_speed = signal.filtfilt(a,b,subset_speed)
-    px.line(y=[smoothed_speed,subset_speed])
-
-    #%%
-    px.line(np.diff(smoothed_speed))
+    realworld_traces = estimate_realworld_motion(track,delta_time_seconds,726.0/55.0/1000.0)
+    save_traces(realworld_traces,f"traces_from_{output_file}.json")

@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 from numpy import sin, cos, sqrt, pi
 # import scipy.integrate
@@ -9,6 +10,8 @@ import scipy.integrate as spi
 from scipy.optimize import brentq
 from bottle_shapes import get_bottle_helper
 from icecream import ic
+import json
+from pathlib import Path
 
 # Assume it's constant for the flight and use dry air, which is more dense than humid air.
 # https://en.wikipedia.org/wiki/Density_of_air
@@ -425,8 +428,40 @@ class RocketWithComponents(Phase):
         self.t += self.timestep
 
         return self.t, self.position(), self.velocity()
-
+#%%
 Traces = namedtuple("Trace",["time","position","velocity","acceleration"])
+
+def save_traces(traces : Traces, output_file : str):
+    if not output_file.endswith(".json"):
+        output_file += ".json"
+
+    output_file_path = Path(output_file)
+    if output_file_path.exists() and output_file_path.is_file():
+        raise ValueError(f"The traces {output_file_path} already exist")
+
+    traces_dict = {key:value.tolist() for key,value in traces._asdict().items()} 
+    with open(output_file,mode='w') as fp:
+        json.dump(traces_dict,fp = fp)
+
+def load_traces(input_file : str):
+    if not input_file.endswith(".json"):
+        input_file += ".json"
+    input_file_path = Path(input_file)
+    if not (input_file_path.exists() and input_file_path.is_file()):
+        raise ValueError(f"Could not load {input_file}")
+    
+    with open(input_file,mode='r') as fp:
+        traces_dict = json.load(fp=fp)
+
+    traces_dict = {k:np.array(v) for k,v in traces_dict.items()}
+    traces = Traces(**traces_dict)
+
+    return traces
+#%%
+x = np.zeros(3)
+test = Traces(time=x,position=x,velocity=x,acceleration=x)
+
+#%%
 class Stepper:
 
     def __init__(self, print_interval=0.025):
