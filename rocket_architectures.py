@@ -85,11 +85,20 @@ def sim_3_boosters(
 
     stepper.step(phase)
 
-    phase = Ballistic(phase.position(), phase.velocity(), phase.t,
-                    dry_mass=dry_mass, 
-                    C_drag=C_drag,
-                    A_cross_sectional_area=pi * (radius**2),
-                    timestep=timestep)
+    ballistic_center = Ballistic(
+        dry_mass = dry_mass,
+        C_drag=C_drag,
+        A_cross_sectional_area=pi * (radius**2),
+    )
+
+    phase = RocketWithComponents(
+        position=phase.position(),
+        velocity=phase.velocity(),
+        t0= phase.t,
+        components=ballistic_center,
+        origin=np.zeros(2),
+        windspeed=windspeed,
+    )
 
     stepper.step(phase)
 
@@ -180,11 +189,20 @@ def sim_3_boosters_bullet(
 
     stepper.step(phase)
 
-    phase = Ballistic(phase.position(), phase.velocity(), phase.t,
-                    dry_mass=dry_mass, 
-                    C_drag=C_drag,
-                    A_cross_sectional_area=pi * (radius**2),
-                    timestep=timestep)
+    ballistic_bullet = Ballistic(
+        dry_mass = dry_mass,
+        C_drag=C_drag,
+        A_cross_sectional_area=pi * (radius**2),
+    )
+
+    phase = RocketWithComponents(
+        position=phase.position(),
+        velocity=phase.velocity(),
+        t0= phase.t,
+        components=ballistic_bullet,
+        origin=np.zeros(2),
+        windspeed=windspeed
+    )
 
     stepper.step(phase)
 
@@ -311,11 +329,20 @@ def sim_3_stage(
     # print(f'Starting stage 3 at {phase.t:0.003}s')
     stepper.step(phase)
 
-    phase = Ballistic(phase.position(), phase.velocity(), phase.t,
-                    dry_mass=s3_dry_mass, 
-                    C_drag=s3_C_drag,
-                    A_cross_sectional_area=pi * s3_radius**2,
-                    timestep=timestep)
+    ballistic_center = Ballistic(
+        dry_mass = s3_dry_mass,
+        C_drag=s3_C_drag,
+        A_cross_sectional_area=pi * (s3_radius**2),
+    )
+
+    phase = RocketWithComponents(
+        position=phase.position(),
+        velocity=phase.velocity(),
+        t0= phase.t,
+        components=ballistic_center,
+        origin=np.zeros(2),
+        windspeed=windspeed,
+    )
 
     # print(f'Ballistic at {phase.t:0.003}s')
     stepper.step(phase)
@@ -367,11 +394,20 @@ def sim1(
 
     stepper.step(phase)
 
-    phase = Ballistic(phase.position(), phase.velocity(), phase.t,
-                    dry_mass=dry_mass, 
-                    C_drag=C_drag,
-                    A_cross_sectional_area=pi * (radius**2),
-                    timestep=timestep)
+    ballistic_center = Ballistic(
+        dry_mass = dry_mass,
+        C_drag=C_drag,
+        A_cross_sectional_area=pi * (radius**2),
+    )
+
+    phase = RocketWithComponents(
+        position=phase.position(),
+        velocity=phase.velocity(),
+        t0= phase.t,
+        components=ballistic_center,
+        origin=np.zeros(2),
+        windspeed=windspeed,
+    )
 
     stepper.step(phase)
 

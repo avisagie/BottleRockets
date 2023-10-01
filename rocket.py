@@ -44,6 +44,24 @@ class Phase(ABC):
     def acceleration(self,value):
         self._acceleration = value
 
+class RocketComponent(ABC):
+    @abstractmethod
+    def F_drag(self, speed2) ->float:
+        pass
+    @abstractmethod
+    def F_thrust(self) -> float:
+        pass
+
+    @abstractmethod 
+    def mass(self) -> float:
+        pass
+    @abstractmethod
+    def step(self,acceleration,distance_from_origin) -> bool:
+        pass
+    @abstractmethod
+    def removable(self) -> bool:
+        pass
+
 class WaterThruster():
     """
     Computes thrust and inertial forces due to the movement and expulsion of water.
@@ -143,7 +161,7 @@ class NaiveWaterThruster:
         return F_tot,ejected_mass
 
 
-class Ballistic(Phase):
+class BallisticOld(Phase):
     def __init__(self, position, velocity, t0, dry_mass, C_drag, A_cross_sectional_area, timestep = 0.001):
         """
         Starting conditions: 
@@ -162,7 +180,6 @@ class Ballistic(Phase):
 
     def position(self):
         return self.state[0]
-
 
     def velocity(self):
         return self.state[1]
@@ -204,7 +221,7 @@ class Ballistic(Phase):
 def always_happy(*args):
     return True
 
-class BoosterScienceBits():
+class BoosterScienceBits(RocketComponent):
 
     """
     Boost phase from science bits: http://www.sciencebits.com/RocketEqs 
@@ -299,6 +316,25 @@ class BoosterScienceBits():
 
         done = True if mass < self.dry_mass else False
         return done
+    
+class Ballistic(RocketComponent):
+    def __init__(self,dry_mass,C_drag, A_cross_sectional_area):
+        self.dry_mass = dry_mass
+        self.C_drag = C_drag
+        self.A_cross_sectional_area = A_cross_sectional_area
+    def F_drag(self, speed2) ->float:
+        return - 0.5 * self.C_drag * air_density * self.A_cross_sectional_area * speed2
+    def F_thrust(self) -> float:
+        return 0.0
+
+    def mass(self) -> float:
+        return self.dry_mass
+    def step(self,*args,**kwargs) -> bool:
+        return False
+    def removable(self) -> bool:
+        return False
+
+    
 
 class RocketWithComponents(Phase):
 
@@ -327,15 +363,15 @@ class RocketWithComponents(Phase):
         self.validate = validate
 
     @property
-    def components(self) -> list[BoosterScienceBits]:
+    def components(self) -> list[RocketComponent]:
         return self._components
 
     @components.setter
-    def components(self,values : list[BoosterScienceBits]):
+    def components(self,values : list[RocketComponent]):
         if not isinstance(values,list):
             values = [values]
 
-        if not all([isinstance(v,BoosterScienceBits) for v in values]):
+        if not all([isinstance(v,RocketComponent) for v in values]):
             raise ValueError("Currently only components of type BoosterScienceBits are allowed")
         
         self._components = values
@@ -408,7 +444,7 @@ class RocketWithComponents(Phase):
         Step the system one step forward.
         Return: t, position, velocity or None if the water's run out
         """
-        done = []
+        done : list[RocketComponent] = []
         for c in self.components:
             dist = np.linalg.norm(self.origin - self.position())
             if c.step(self.acceleration,distance_from_origin = dist):
