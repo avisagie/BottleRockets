@@ -1,16 +1,20 @@
-#%%
+import argparse
 import cv2 as cv
 import numpy as np
 import plotly.express as px
-from icecream import ic
 from pathlib import Path
-from scipy import signal
-from rocket import (
-    Traces,
-    save_traces
-)
+import sys
 
-def read_video(video_file : str) -> np.ndarray:
+working_dir = Path(".").absolute()
+if working_dir.name == "calibrate":
+    root_dir = working_dir.parent
+else:
+    root_dir = working_dir
+sys.path.append(str(root_dir))
+from rocket import Traces, save_traces
+
+
+def read_video(video_file: str) -> np.ndarray:
     if not Path(video_file).is_file():
         raise ValueError(f"Video file {video_file} not found.")
 
@@ -22,176 +26,229 @@ def read_video(video_file : str) -> np.ndarray:
 
         if not ret:
             break
-        frames.append(frame) 
-        hsv_frames.append(cv.cvtColor(frame,cv.COLOR_BGR2HSV))
+        frames.append(frame)
+        hsv_frames.append(cv.cvtColor(frame, cv.COLOR_BGR2HSV))
 
     cap.release()
     return np.array(frames)
 
+
 def bgr_to_hsv_colorspace(video_frames: np.ndarray) -> np.ndarray:
     hsv_frames = np.zeros(video_frames.shape)
     for i in enumerate(video_frames):
-        hsv_frames[i,:] = cv.cvtColor(frames[i],cv.COLOR_BGR2HSV)
+        hsv_frames[i, :] = cv.cvtColor(frames[i], cv.COLOR_BGR2HSV)
 
     return hsv_frames
-    
-def motion_detect_hsv(video_frames : np.ndarray):
+
+
+def motion_detect_hsv(video_frames: np.ndarray):
     diff = video_frames.astype(int)
-    # value_mask = diff[:,:,:,2] > 10
-    # diff = diff*np.expand_dims(value_mask,axis=3)
-    diff = np.diff(diff,axis=0)
+    diff = np.diff(diff, axis=0)
     # the hue in hsv is circular and goes from 0 to 179
-    diff[:,:,:,0] = ((diff[:,:,:,0] + 90) % 180 - 90)*2
-    diff = np.abs(diff)  
-    diff = np.sum(diff,axis=3)/3.0
-    return diff.astype(np.uint8)
-
-def motion_detect_bgr(video_frames : np.ndarray):
-    diff = video_frames.astype(int)
-    diff = np.diff(diff,axis=0)
+    diff[:, :, :, 0] = ((diff[:, :, :, 0] + 90) % 180 - 90) * 2
     diff = np.abs(diff)
-    diff = np.sum(diff,axis=3)/3
+    diff = np.sum(diff, axis=3) / 3.0
     return diff.astype(np.uint8)
 
-def hue_filter(frames_to_mask : np.ndarray,hsv_video_frames : np.ndarray, hsv_start : np.ndarray, hsv_end : np.ndarray,invert_hue_range = False) -> np.ndarray:
+
+def motion_detect_bgr(video_frames: np.ndarray):
+    diff = video_frames.astype(int)
+    diff = np.diff(diff, axis=0)
+    diff = np.abs(diff)
+    diff = np.sum(diff, axis=3) / 3
+    return diff.astype(np.uint8)
+
+
+def hue_filter(
+    frames_to_mask: np.ndarray,
+    hsv_video_frames: np.ndarray,
+    hsv_start: np.ndarray,
+    hsv_end: np.ndarray,
+    invert_hue_range=False,
+) -> np.ndarray:
     frames = np.array(hsv_video_frames)
-    for i,frame in enumerate(hsv_video_frames):
-        if not invert_hue_range  :
-            mask = cv.inRange(frame,hsv_start,hsv_end)
+    for i, frame in enumerate(hsv_video_frames):
+        if not invert_hue_range:
+            mask = cv.inRange(frame, hsv_start, hsv_end)
         else:
             start_A = np.array(hsv_start)
             start_B = np.array(hsv_start)
             end_A = np.array(hsv_end)
             end_B = np.array(hsv_end)
-            
+
             start_A[0] = 0
             end_A[0] = hsv_start[0]
 
             start_B[0] = hsv_end[0]
             end_B[0] = 179
 
-            mask_A = cv.inRange(frame,start_A,end_A)
-            mask_B = cv.inRange(frame,start_B,end_B)
-            mask = cv.bitwise_or(mask_A,mask_B)
+            mask_A = cv.inRange(frame, start_A, end_A)
+            mask_B = cv.inRange(frame, start_B, end_B)
+            mask = cv.bitwise_or(mask_A, mask_B)
 
-        frames[i,:] = cv.bitwise_and(frames_to_mask[i,:],frames_to_mask[i,:],mask = mask)
+        frames[i, :] = cv.bitwise_and(frames_to_mask[i, :], frames_to_mask[i, :], mask=mask)
 
     return frames
 
-def clamp(video_frames : np.ndarray,sensitivity = 0.5):
+
+def clamp(video_frames: np.ndarray, sensitivity=0.5):
     video_frames = video_frames.astype(float)
     max_value = video_frames.max()
-    video_frames = np.clip(video_frames - max_value*sensitivity,a_min = 0, a_max=255)
-    video_frames = video_frames/(max_value - sensitivity*max_value)*255
+    video_frames = np.clip(video_frames - max_value * sensitivity, a_min=0, a_max=255)
+    video_frames = video_frames / (max_value - sensitivity * max_value) * 255
     return video_frames.astype(np.uint8)
 
-def save_mono_channel_video(video_file : str,video_frames) -> None:
+
+def save_mono_channel_video(video_file: str, video_frames) -> None:
     path = Path(video_file)
     if path.exists() and path.is_file():
         path.unlink()
-    height,width = video_frames[0].shape
-    print(width,height)
+    height, width = video_frames[0].shape
+    print(width, height)
     writer = cv.VideoWriter(
         filename=video_file,
         fourcc=cv.VideoWriter.fourcc(*"mp4v"),
-        frameSize=(width,height),
+        frameSize=(width, height),
         fps=10,
-        isColor= False,
+        isColor=False,
     )
     for frame in video_frames:
         writer.write(frame)
 
     writer.release()
 
-def save_color_video(video_file : str,video_frames) -> None:
+
+def save_color_video(video_file: str, video_frames) -> None:
     path = Path(video_file)
     if path.exists() and path.is_file():
         path.unlink()
-    height,width,_ = video_frames[0].shape
-    print(width,height)
+    height, width, _ = video_frames[0].shape
+    print(width, height)
     writer = cv.VideoWriter(
         filename=video_file,
         fourcc=cv.VideoWriter.fourcc(*"mp4v"),
-        frameSize=(width,height),
+        frameSize=(width, height),
         fps=10,
-        isColor= True,
+        isColor=True,
     )
     for frame in video_frames:
         writer.write(frame)
 
     writer.release()
 
-def show(img,is_bgr = False):
+
+def show(img, is_bgr=False):
     if is_bgr:
-        img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
+        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
-    px.imshow(img,binary_string=not is_bgr).show()
+    px.imshow(img, binary_string=not is_bgr).show()
 
-def track_largest_blob(video_frames : np.ndarray) -> tuple[list,np.ndarray] :
+
+def track_largest_blob(video_frames: np.ndarray) -> tuple[list, np.ndarray]:
     frame_contours = []
-    largest_contour_centers = np.zeros([len(video_frames),2])
-    for i,frame in enumerate(video_frames):
-        contours,_ = cv.findContours(frame,cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        contours = sorted(contours,key=lambda x:cv.contourArea(x))
+    largest_contour_centers = np.zeros([len(video_frames), 2])
+    for i, frame in enumerate(video_frames):
+        contours, _ = cv.findContours(frame, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        contours = sorted(contours, key=lambda x: cv.contourArea(x))
         if len(contours) > 0:
             largest_contour = contours[-1]
             M = cv.moments(largest_contour)
-            M['m00'] += 1E-6
-            cx = int(M['m10']/M['m00'])
-            cy = int(M['m01']/M['m00'])
+            M["m00"] += 1e-6
+            cx = int(M["m10"] / M["m00"])
+            cy = int(M["m01"] / M["m00"])
             frame_contours.append(contours)
-            largest_contour_centers[i,:] = [cx,cy]
+            largest_contour_centers[i, :] = [cx, cy]
         else:
             frame_contours.append([])
-            largest_contour_centers[i,:] = np.inf
+            largest_contour_centers[i, :] = np.inf
 
-    return frame_contours,largest_contour_centers
+    return frame_contours, largest_contour_centers
 
-def add_track_and_contours(video_frames : np.ndarray, track : np.ndarray, contours_s : list):
-    for i,(frame,contours) in enumerate(zip(video_frames[1:],contours_s)):
+
+def add_track_and_contours(video_frames: np.ndarray, track: np.ndarray, contours_s: list):
+    for i, (frame, contours) in enumerate(zip(video_frames[1:], contours_s)):
         n_contours = len(contours)
         if n_contours > 0:
-            frame = cv.drawContours(frame, contours[-1], -1, (0,0,255), 3)
+            frame = cv.drawContours(frame, contours[-1], -1, (0, 0, 55), 3)
         if n_contours > 1:
-            frame = cv.drawContours(frame, contours[:-1], -1, (0,255,255), 3)
+            frame = cv.drawContours(frame, contours[:-1], -1, (0, 255, 255), 3)
 
         for point in track[:i]:
-            frame = cv.circle(frame,point.astype(np.uint),3,(0,0,255))
+            frame = cv.circle(frame, point.astype(np.uint), 3, (0, 0, 255))
 
-def estimate_realworld_motion(track : np.ndarray, delta_time_seconds : float, pixel_width_meters : float) -> Traces:
-    time = np.arange(len(track))*delta_time_seconds
-    track = track*pixel_width_meters
 
-    is_inf = np.isinf(track[:,0])
+def estimate_realworld_motion(
+    track: np.ndarray, delta_time_seconds: float, pixel_width_meters: float
+) -> Traces:
+    time = np.arange(len(track)) * delta_time_seconds
+    track = track * pixel_width_meters
+
+    is_inf = np.isinf(track[:, 0])
     time = time[~is_inf]
     track = track[~is_inf]
 
-    dt = np.expand_dims(np.diff(time),-1)
-    dxdy = np.diff(track,axis=0)
-    velocity = dxdy/dt
-    acceleration = np.diff(velocity)
-    traces = Traces(time = time,position=track,velocity=velocity,acceleration=acceleration)
+    dt = np.expand_dims(np.diff(time), -1)
+    dxdy = np.diff(track, axis=0)
+    velocity = dxdy / dt
+    acceleration = np.diff(velocity) / dt
+    traces = Traces(time=time, position=track, velocity=velocity, acceleration=acceleration)
 
     return traces
 
-  
-if __name__ == "__main__":
-    # %%
-    media_folder = "/mnt/c/bottlerocket/"
-    video_file = "single_bottle.mp4"
-    frames= read_video(media_folder + video_file)
 
+def track_red_moving_object(frames: np.ndarray) -> tuple[list, np.ndarray]:
     red_frames = frames.astype(int)
-    red_frames = np.clip(red_frames[:,:,:,2] - red_frames[:,:,:,0] - red_frames[:,:,:,1],a_min=0,a_max=255)
-    red_diff = np.diff(red_frames,axis=0)
-    red_clamped = clamp(red_diff,0.1)
-    contours,track = track_largest_blob(red_clamped)
+    red_frames = np.clip(
+        red_frames[:, :, :, 2] - red_frames[:, :, :, 0] - red_frames[:, :, :, 1], a_min=0, a_max=255
+    )
+    red_diff = np.diff(red_frames, axis=0)
+    red_clamped = clamp(red_diff, 0.1)
+    contours, track = track_largest_blob(red_clamped)
+    return contours, track
 
-    add_track_and_contours(frames,track,contours)
 
-    output_file = "final.mp4"
-    save_color_video(media_folder + output_file,frames)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="Traces from video",
+        description="Extract trajectory of rocket from a video. The video should be taken by a stationary camera.",
+    )
+    parser.add_argument("video_file")
+    parser.add_argument("frame_rate", type=float, help="The video frame rate in Hz.")
+    parser.add_argument(
+        "pixel_size_meters",
+        type=float,
+        help="The number of meters one pixel represents in the plane wherein the rocket moves.",
+    )
+    parser.add_argument(
+        "--output_file",
+        dest="output_file",
+        default="video_with_trace.mp4",
+        help="Example output.mp4. Indicates where to store the output video wherein the tracked object is indicated.",
+    )
+    parser.add_argument(
+        "--feature_to_track",
+        dest="feature_to_track",
+        default="red_movement",
+        help="Selects a method for identifying the rocket within the video.",
+    )
+    args = parser.parse_args()
 
-    delta_time_seconds = 1.0/240.0
-    realworld_traces = estimate_realworld_motion(track,delta_time_seconds,726.0/55.0/1000.0)
-    save_traces(realworld_traces,f"traces_from_{output_file}.json")
+    print(f"Reading video {args.video_file}")
+    frames = read_video(args.video_file)
+
+    if args.feature_to_track == "red_movement":
+        print("Tracking the biggest moving thing that is also red.")
+        contours, track = track_red_moving_object(frames)
+    else:
+        raise (
+            NotImplementedError(
+                f"Tracking option '{args.feature_to_track}' not implemented. Feel free to add your own."
+            )
+        )
+
+    add_track_and_contours(frames, track, contours)
+    save_color_video(args.output_file, frames)
+
+    delta_time_seconds = 1.0 / args.frame_rate
+    realworld_traces = estimate_realworld_motion(track, delta_time_seconds, args.pixel_size_meters)
+    save_traces(realworld_traces, f"{args.output_file.split('.')[0]}.json")
