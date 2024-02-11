@@ -10,7 +10,7 @@ from plotly import express as px
 #%%
 if __name__ == "__main__":
     #%%
-    traces = load_traces("traces_from_final.mp4.json")
+    traces = load_traces("../traces_from_final.mp4.json")
     #%%
     start = 16
     end = 106
@@ -24,11 +24,17 @@ if __name__ == "__main__":
     px.line(y=[smoothed_speed,subset_speed],title = "smoothed velocity").show()
 
     smoothed_speed = smoothed_speed[padding[0]:-padding[1]]
-    smoothed_acceleration = np.diff(smoothed_speed)
+    smoothed_acceleration = np.diff(smoothed_speed)/np.diff(subset_traces["time"])
 
     #%%
     px.line(smoothed_acceleration,title = "smoothed acceleration").show()
 
+    velocity = np.zeros(subset_traces["velocity"].shape)
+    acceleration = np.zeros(subset_traces["acceleration"].shape)
+
+    velocity[:,0] = smoothed_speed
+    acceleration[:-1,0] = smoothed_acceleration
+    position = subset_traces["position"]-np.min(subset_traces["position"],axis=0)
     #%%
-    smoothed_traces = Traces(time=subset_traces["time"],position=subset_traces["position"],velocity=np.expand_dims(smoothed_speed,-1),acceleration=smoothed_acceleration)
+    smoothed_traces = Traces(time=traces.time[:len(smoothed_speed)],position=position,velocity=velocity,acceleration=acceleration)
     save_traces(smoothed_traces,"smoothed.json")
