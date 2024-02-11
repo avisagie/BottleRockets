@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from from_video import read_video,show
+from calibrate.traces_from_video import read_video,show
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

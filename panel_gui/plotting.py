@@ -14,16 +14,23 @@ def create_scatter_plots_from_trace(name, trace: Traces):
         hovertext = [f"{time:.2f}s" for time in trace.time],
         name=name + " position",
     )
-
+    spd = np.linalg.norm(trace.velocity, axis = 1,keepdims=True)
     speed = go.Scatter(
         x=trace.time,
-        y=np.linalg.norm(trace.velocity, axis=1),
+        y=spd[:,0],
         name=name + " speed",
     )
+    # direction_of_movement = trace.velocity/spd
+    magnitude_of_acceleration = np.linalg.norm(trace.acceleration, axis=1,keepdims=True)
+    # direction_of_acceleration = trace.acceleration/magnitude_of_acceleration
+    # forward_acceleration = np.array(magnitude_of_acceleration)
+    # for i in range(len(direction_of_acceleration)):
+    #     dot_v_a = direction_of_movement[i].T@direction_of_acceleration[i]
+    #     forward_acceleration[i]*=dot_v_a
 
     acc = go.Scatter(
         x=trace.time,
-        y=np.linalg.norm(trace.acceleration, axis=1) / 9.8,
+        y=magnitude_of_acceleration[:,0]/9.8,
         name=name + " acceleration",
     )
     return pos, speed, acc
@@ -79,7 +86,7 @@ def plot_multiple_traces(test_names: list[str], traces: list[Traces]) -> go.Figu
 
     fig.update_xaxes(title_text="Time", row=2, col=1)
     fig.update_yaxes(title="speed (m/s)", row=2, col=1)
-    fig.update_yaxes(title="acceleration (g)", row=3, col=1)
+    fig.update_yaxes(title="forward acceleration (g)", row=3, col=1)
 
     return fig
 

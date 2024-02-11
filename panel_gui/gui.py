@@ -13,11 +13,16 @@ sys.path.append(str(parent_dir))
 import panel as pn
 from panel_gui.simulation_templates import SimulatorTemplate, get_simulators
 from panel_gui.plotting import plot_single_trace, plot_multiple_traces
+from rocket import load_traces
 
-pn.extension("plotly")
-pn.extension("jsoneditor")
+pn.extension("plotly") #type: ignore
+pn.extension("jsoneditor") #type: ignore
 
 simulation_results = []
+
+# simulation_results.append(("from video",load_traces("traces_from_final.mp4.json")))
+simulation_results.append(("from video",load_traces("calibrate/smoothed.json")))
+
 simulation_display = pn.pane.Plotly(sizing_mode="stretch_both")
 error_display = pn.pane.Alert("Ready",alert_type = "success")
 
@@ -45,7 +50,7 @@ def update_display():
         traces = next(unzipped)
         simulation_display.object = plot_multiple_traces(names, traces)
 
-    simulation_display.object.layout.autosize = True
+    # simulation_display.object.layout.autosize = True
 
 
 def run_simulation(name, arguments, function):
