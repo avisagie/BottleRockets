@@ -350,7 +350,7 @@ def sim_3_stage(
     return stepper.get_traces()
 
 
-def sim1(
+def sim_single_bottle(
     radius = 0.045,
     C_drag = 0.3,
     dry_mass = 0.5,
@@ -397,7 +397,7 @@ def sim1(
     ballistic_center = Ballistic(
         dry_mass = dry_mass,
         C_drag=C_drag,
-        A_cross_sectional_area=pi * (radius**2),
+        A_cross_sectional_area=pi * (radius**2) + extra_frontal_surface,
     )
 
     phase = RocketWithComponents(
@@ -446,3 +446,6 @@ def plot_basic(traces : Traces):
 if __name__ == "__main__":
     traces = sim_3_boosters_bullet()
     plot_basic(traces)
+
+
+    

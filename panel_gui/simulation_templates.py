@@ -7,7 +7,7 @@ SimulatorTemplate = namedtuple("simulator", ["name", "arguments", "function"])
 
 def get_simulators() -> list[SimulatorTemplate]:
     simulators_functions = [
-        ra.sim1,
+        ra.sim_single_bottle,
         ra.sim_3_boosters,
         ra.sim_3_boosters_bullet,
         ra.sim_3_stage,

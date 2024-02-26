@@ -4,7 +4,7 @@ from util import *
 
 from matplotlib import pylab
 
-from rocket_architectures import sim_3_boosters, sim1, plot_basic
+from rocket_architectures import sim_3_boosters, sim_single_bottle, plot_basic
 
 if __name__ == "__main__":
 

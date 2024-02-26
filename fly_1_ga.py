@@ -32,7 +32,7 @@ params = {
 }
 
 def fitness(params):    
-    traces = rocket_architectures.sim1(**params)
+    traces = rocket_architectures.sim_single_bottle(**params)
 
     time, position, velocity, acceleration = traces
     speed = sqrt(np.sum(velocity * velocity, axis=1))
@@ -53,6 +53,6 @@ ga.run()
 print(f"Rocket length:{length:0.01f}m, volume:{volume:0.01f}l")
 
 best_params = ga.get_best_params()
-traces = rocket_architectures.sim1(**best_params)
+traces = rocket_architectures.sim_single_bottle(**best_params)
 rocket_architectures.plot_basic(traces)
 

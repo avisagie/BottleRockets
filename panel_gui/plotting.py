@@ -4,7 +4,7 @@ import plotly.express as px
 from rocket_architectures import Traces
 import pandas as pd
 import numpy as np
-from rocket_architectures import sim1
+from rocket_architectures import sim_single_bottle
 
 
 def create_scatter_plots_from_trace(name, trace: Traces):
@@ -93,7 +93,7 @@ def plot_multiple_traces(test_names: list[str], traces: list[Traces]) -> go.Figu
 
 if __name__ == "__main__":
     n = 100
-    test_trace = sim1()
+    test_trace = sim_single_bottle()
 
     fig = plot_single_trace("sim 1", test_trace)
     fig.show()

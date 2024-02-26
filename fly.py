@@ -4,7 +4,7 @@ from util import *
 
 from matplotlib import pylab
 
-from rocket_architectures import sim_3_boosters, sim_3_boosters_bullet, sim1, plot_basic
+from rocket_architectures import sim_3_boosters, sim_3_boosters_bullet, sim_single_bottle, plot_basic
 
 if __name__ == "__main__":
 
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     fin_thickness = 0.003
     fin_length = 0.110
 
-    traces = sim1(
+    traces = sim_single_bottle(
         radius = radius,
         C_drag = 0.32, 
         dry_mass = 0.330,

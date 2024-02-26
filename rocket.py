@@ -1,4 +1,3 @@
-#%%
 import numpy as np
 from numpy import sin, cos, sqrt, pi
 # import scipy.integrate
@@ -348,7 +347,8 @@ class RocketWithComponents(Phase):
                  rail_angle = 45,
                  validate = always_happy, # tell if this system holds together
                  timestep = 0.001,
-                 windspeed = 0.0):
+                 windspeed = 0.0 # meters per second (negative for headwind, positive for tailwind)
+                 ):
         # (mass and pressure are vectors in case I want to use scipy integrators)
         self.state = np.array([position, velocity + 1e-7]) 
         self.t = t0
@@ -464,7 +464,6 @@ class RocketWithComponents(Phase):
         self.t += self.timestep
 
         return self.t, self.position(), self.velocity()
-#%%
 Traces = namedtuple("Trace",["time","position","velocity","acceleration"])
 
 def save_traces(traces : Traces, output_file : str):
@@ -493,11 +492,9 @@ def load_traces(input_file : str):
     traces = Traces(**traces_dict)
 
     return traces
-#%%
 x = np.zeros(3)
 test = Traces(time=x,position=x,velocity=x,acceleration=x)
 
-#%%
 class Stepper:
 
     def __init__(self, print_interval=0.025):
