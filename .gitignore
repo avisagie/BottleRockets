@@ -4,3 +4,5 @@ __pycache__/
 venv
 out
 scratch.py
+output/*
+!/output/.gitkeep
