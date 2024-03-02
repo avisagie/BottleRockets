@@ -15,7 +15,7 @@ from rocket import (
 from util import *
 
 
-def sim_3_boosters(
+def sim_rocket_with_boosters(
     radius=0.045,
     C_drag=0.3,
     dry_mass=0.5,
