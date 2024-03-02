@@ -4,8 +4,8 @@ from numpy import cos, pi, sin, sqrt
 
 from rocket_architectures import (
     plot_basic,
-    sim_3_boosters,
     sim_3_boosters_bullet,
+    sim_rocket_with_boosters,
     sim_single_bottle,
 )
 from util import *
