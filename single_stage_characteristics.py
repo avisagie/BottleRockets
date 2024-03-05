@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -33,9 +34,10 @@ def grid_search_weight(shared_config: dict, sim=sim_single_bottle):
     assert "dry_mass" not in shared_config.keys()
     assert "windspeed" not in shared_config.keys()
 
-    mass = np.linspace(0.01, 0.6, 100)
+    mass = np.linspace(0.01, 0.6, 50)
     fig = go.Figure()
-    for w in np.array([0, -4.0, -8.0, -16.0, -32.0]) * -1:
+    max_results = dict(wind=[], weight=[])
+    for w in np.array([-16.0, -8.0, -4.0, -2.0, 0.0, 2.0, 4.0, 8.0, 16.0]):
         sims_to_run = [
             dict(
                 **shared_config,
@@ -46,23 +48,28 @@ def grid_search_weight(shared_config: dict, sim=sim_single_bottle):
         ]
         traces = [sim(**sim_cf) for sim_cf in sims_to_run]
         distances = [trace.position[-1][0] for trace in traces]
+        max_results["wind"].append(w)
+        max_results["weight"].append(sims_to_run[np.argmax(distances)]["dry_mass"])
         fig.add_trace(go.Scatter(mode="lines", x=mass, y=distances, name=f"Wind :{w} m/s"))
-        fig.update_layout(
-            xaxis_title="mass (kg)",
-            yaxis_title="distance (m)",
-            title="Distance vs Mass (tail wind)",
-        )
+
+    fig.update_layout(
+        xaxis_title="mass (kg)",
+        yaxis_title="distance (m)",
+        title="Distance vs Mass",
+    )
 
     fig.show()
+    print(pd.DataFrame(data=max_results).to_markdown())
 
 
 def grid_search_angle(shared_config: dict, sim=sim_single_bottle):
     assert "theta" not in shared_config.keys()
     assert "windspeed" not in shared_config.keys()
 
-    angle = np.linspace(15, 60, 100)
+    angle = np.linspace(15, 60, 50)
     fig = go.Figure()
-    for w in np.array([0, -4.0, -8.0, -16.0, -32.0]) * -1:
+    max_results = dict(wind=[], angle=[])
+    for w in np.array([-16.0, -8.0, -4.0, -2.0, 0.0, 2.0, 4.0, 8.0, 16.0]):
         sims_to_run = [
             dict(
                 **shared_config,
@@ -73,12 +80,39 @@ def grid_search_angle(shared_config: dict, sim=sim_single_bottle):
         ]
         traces = [sim(**sim_cf) for sim_cf in sims_to_run]
         distances = [trace.position[-1][0] for trace in traces]
+
+        max_results["wind"].append(w)
+        max_results["angle"].append(sims_to_run[np.argmax(distances)]["theta"])
+
         fig.add_trace(go.Scatter(mode="lines", x=angle, y=distances, name=f"Wind :{w} m/s"))
-        fig.update_layout(
-            xaxis_title="angle (degrees)",
-            yaxis_title="distance (m)",
-            title="Distance vs Angle (tail wind)",
-        )
+    fig.update_layout(
+        xaxis_title="angle (degrees)",
+        yaxis_title="distance (m)",
+        title="Distance vs Angle",
+    )
+
+    fig.show()
+    print(pd.DataFrame(data=max_results).to_markdown())
+
+
+def grid_search_drag(shared_config: dict, sim=sim_single_bottle):
+    assert "C_drag" not in shared_config.keys()
+    assert "windspeed" not in shared_config.keys()
+
+    c_drag = np.linspace(0.05, 0.5, 50)
+    fig = go.Figure()
+
+    for w in np.array([0, -1.0, -2.0, -4.0, -16.0]) * -1:
+        sims_to_run = [dict(**shared_config, C_drag=d, windspeed=w) for d in c_drag]
+        traces = [sim(**sim_cf) for sim_cf in sims_to_run]
+        distances = [trace.position[-1][0] for trace in traces]
+        fig.add_trace(go.Scatter(mode="lines", x=c_drag, y=distances, name=f"wind: {w} m/s"))
+
+    fig.update_layout(
+        xaxis_title="drag coefficient",
+        yaxis_title="distance (m)",
+        title=f"Distance vs drag coefficient (sprite at {shared_config['dry_mass']} kg)",
+    )
 
     fig.show()
 
@@ -90,22 +124,22 @@ def characterise_sprite_bottle():
         nozzle_radius=0.0105,
         launch_tube_length=0.25,
         rail_length=3.0,
-        extra_frontal_surface=0.001,
+        extra_frontal_surface=0.000,
         timestep=0.0001,
         bottle_shape="naive",
         pressure=6,
         volume=2.25,
         water_l=2.25 / 3.0,
-        C_drag=0.245,
     )
 
-    config = shared_sprite_config.copy()
-    config["theta"] = 42
+    config = dict(**shared_sprite_config, theta=42, C_drag=0.12)
     grid_search_weight(shared_config=config, sim=sim)
 
-    config = shared_sprite_config.copy()
-    config["dry_mass"] = 0.3
+    config = dict(**shared_sprite_config, dry_mass=0.18, C_drag=0.12)
     grid_search_angle(shared_config=config, sim=sim)
+
+    config = dict(**shared_sprite_config, dry_mass=0.18, theta=42)
+    # grid_search_drag(shared_config=config, sim=sim)
 
 
 def characterise_accuracy_rocket():
@@ -136,5 +170,5 @@ def characterise_accuracy_rocket():
 
 
 if __name__ == "__main__":
-    characterise_accuracy_rocket()
+    # characterise_accuracy_rocket()
     characterise_sprite_bottle()
