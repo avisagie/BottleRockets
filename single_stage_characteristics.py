@@ -1,3 +1,6 @@
+import itertools
+from concurrent.futures import Future, ThreadPoolExecutor, wait
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -95,6 +98,44 @@ def grid_search_angle(shared_config: dict, sim=sim_single_bottle):
     print(pd.DataFrame(data=max_results).to_markdown())
 
 
+def grid_search_weight_and_angle(shared_config: dict, sim=sim_single_bottle):
+    assert "theta" not in shared_config.keys()
+    assert "windspeed" not in shared_config.keys()
+    assert "dry_mass" not in shared_config.keys()
+    n = 30
+
+    angle = np.linspace(20, 50, n)
+    mass = np.linspace(0.01, 0.6, n)
+    wind = [-16.0, -8.0, -4.0, -2.0, 0.0, 2.0, 4.0, 8.0, 16.0]
+    angle_mass_wind_comb = list(itertools.product(angle, mass, wind))
+    sims_to_run = [
+        dict(
+            **shared_config,
+            theta=a,
+            dry_mass=m,
+            windspeed=w,
+        )
+        for a, m, w in angle_mass_wind_comb
+    ]
+    print(f"Starting {len(sims_to_run)} sims")
+    result_futures = []
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        result_futures = [executor.submit(sim, **sim_conf) for sim_conf in sims_to_run]
+        wait(result_futures)
+        print("All futures have finished")
+
+    traces = [f.result() for f in result_futures]
+    distances = [trace.position[-1][0] for trace in traces]
+
+    angles, masses, winds = zip(*angle_mass_wind_comb)
+    result_df = pd.DataFrame(data=dict(angle=angles, mass=masses, wind=winds, distance=distances))
+    max_results = result_df.loc[result_df.groupby("wind")["distance"].idxmax()]
+
+    print(max_results.to_markdown())
+    fig = px.scatter(max_results, x="mass", y="angle", color="wind")
+    fig.show()
+
+
 def grid_search_drag(shared_config: dict, sim=sim_single_bottle):
     assert "C_drag" not in shared_config.keys()
     assert "windspeed" not in shared_config.keys()
@@ -133,13 +174,16 @@ def characterise_sprite_bottle():
     )
 
     config = dict(**shared_sprite_config, theta=42, C_drag=0.12)
-    grid_search_weight(shared_config=config, sim=sim)
+    # grid_search_weight(shared_config=config, sim=sim)
 
     config = dict(**shared_sprite_config, dry_mass=0.18, C_drag=0.12)
-    grid_search_angle(shared_config=config, sim=sim)
+    # grid_search_angle(shared_config=config, sim=sim)
 
     config = dict(**shared_sprite_config, dry_mass=0.18, theta=42)
     # grid_search_drag(shared_config=config, sim=sim)
+
+    config = dict(**shared_sprite_config, C_drag=0.12)
+    grid_search_weight_and_angle(shared_config=config, sim=sim)
 
 
 def characterise_accuracy_rocket():
