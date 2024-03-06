@@ -501,7 +501,7 @@ class RocketWithComponents(Phase):
         return self.t, self.position(), self.velocity()
 
 
-Traces = namedtuple("Trace", ["time", "position", "velocity", "acceleration"])
+Traces = namedtuple("Traces", ["time", "position", "velocity", "acceleration"])
 
 
 def save_traces(traces: Traces, output_file: str):
