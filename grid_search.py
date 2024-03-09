@@ -1,12 +1,12 @@
 import itertools
-from concurrent.futures import Future, ProcessPoolExecutor, wait
+from concurrent.futures import ProcessPoolExecutor, wait
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from rocket_architectures import plot_basic, sim_single_bottle
+from rocket_architectures import sim_single_bottle
 
 
 def run_sims(sims_to_run: list[dict], sim=sim_single_bottle):
@@ -148,7 +148,7 @@ def grid_search_drag(shared_config: dict, sim=sim_single_bottle):
     c_drag = np.linspace(0.05, 0.5, 50)
     fig = go.Figure()
 
-    for w in np.array([0, -1.0, -2.0, -4.0, -16.0]) * -1:
+    for w in np.array([0, -1.0, -2.0, -4.0, -8, -16.0]) * -1:
         sims_to_run = [dict(**shared_config, C_drag=d, windspeed=w) for d in c_drag]
         traces = [sim(**sim_cf) for sim_cf in sims_to_run]
         distances = [trace.position[-1][0] for trace in traces]
@@ -179,10 +179,10 @@ def characterise_sprite_bottle():
     )
 
     config = dict(**shared_sprite_config, theta=42, C_drag=0.12)
-    # grid_search_weight(shared_config=config, sim=sim)
+    grid_search_weight(shared_config=config, sim=sim)
 
     config = dict(**shared_sprite_config, dry_mass=0.195, C_drag=0.12)
-    grid_search_angle(shared_config=config, sim=sim)
+    # grid_search_angle(shared_config=config, sim=sim)
 
     config = dict(**shared_sprite_config, dry_mass=0.18, theta=42)
     # grid_search_drag(shared_config=config, sim=sim)
