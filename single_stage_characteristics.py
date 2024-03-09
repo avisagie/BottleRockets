@@ -50,22 +50,23 @@ def grid_search_weight(shared_config: dict, sim=sim_single_bottle):
     assert "windspeed" not in shared_config.keys()
 
     mass = np.linspace(0.01, 0.6, 50)
-    fig = go.Figure()
-    max_results = dict(wind=[], weight=[])
-    for w in np.array([-16.0, -8.0, -4.0, -2.0, 0.0, 2.0, 4.0, 8.0, 16.0]):
-        sims_to_run = [
-            dict(
-                **shared_config,
-                dry_mass=m,
-                windspeed=w,
-            )
-            for m in mass
-        ]
-        traces = [sim(**sim_cf) for sim_cf in sims_to_run]
-        distances = [trace.position[-1][0] for trace in traces]
-        max_results["wind"].append(w)
-        max_results["weight"].append(sims_to_run[np.argmax(distances)]["dry_mass"])
-        fig.add_trace(go.Scatter(mode="lines", x=mass, y=distances, name=f"Wind :{w} m/s"))
+    wind = np.array([-16.0, -8.0, -4.0, -2.0, 0.0, 2.0, 4.0, 8.0, 16.0])
+    mass_wind_comb = list(itertools.product(mass, wind))
+    sims_to_run = [
+        dict(
+            **shared_config,
+            dry_mass=m,
+            windspeed=w,
+        )
+        for m, w in mass_wind_comb
+    ]
+    traces = run_sims(sims_to_run, sim)
+    distances = [trace.position[-1][0] for trace in traces]
+    masses, winds = zip(*mass_wind_comb)
+    result_df = pd.DataFrame(data=dict(mass=masses, wind=winds, distance=distances))
+    max_results = result_df.loc[result_df.groupby("wind")["distance"].idxmax()]
+    print(max_results.to_markdown())
+    fig = px.line(result_df, x="mass", y="distance", color="wind")
 
     fig.update_layout(
         xaxis_title="mass (kg)",
@@ -82,24 +83,24 @@ def grid_search_angle(shared_config: dict, sim=sim_single_bottle):
     assert "windspeed" not in shared_config.keys()
 
     angle = np.linspace(15, 60, 50)
-    fig = go.Figure()
-    max_results = dict(wind=[], angle=[])
-    for w in np.array([-16.0, -8.0, -4.0, -2.0, 0.0, 2.0, 4.0, 8.0, 16.0]):
-        sims_to_run = [
-            dict(
-                **shared_config,
-                theta=a,
-                windspeed=w,
-            )
-            for a in angle
-        ]
-        traces = [sim(**sim_cf) for sim_cf in sims_to_run]
-        distances = [trace.position[-1][0] for trace in traces]
+    wind = np.array([-16.0, -8.0, -4.0, -2.0, 0.0, 2.0, 4.0, 8.0, 16.0])
+    angle_wind_comb = list(itertools.product(angle, wind))
+    sims_to_run = [
+        dict(
+            **shared_config,
+            theta=a,
+            windspeed=w,
+        )
+        for a, w in angle_wind_comb
+    ]
+    traces = run_sims(sims_to_run, sim)
+    distances = [trace.position[-1][0] for trace in traces]
+    angles, winds = zip(*angle_wind_comb)
+    result_df = pd.DataFrame(data=dict(angle=angles, wind=winds, distance=distances))
+    max_results = result_df.loc[result_df.groupby("wind")["distance"].idxmax()]
+    print(max_results.to_markdown())
+    fig = px.line(result_df, x="angle", y="distance", color="wind")
 
-        max_results["wind"].append(w)
-        max_results["angle"].append(sims_to_run[np.argmax(distances)]["theta"])
-
-        fig.add_trace(go.Scatter(mode="lines", x=angle, y=distances, name=f"Wind :{w} m/s"))
     fig.update_layout(
         xaxis_title="angle (degrees)",
         yaxis_title="distance (m)",
@@ -107,7 +108,6 @@ def grid_search_angle(shared_config: dict, sim=sim_single_bottle):
     )
 
     fig.show()
-    print(pd.DataFrame(data=max_results).to_markdown())
 
 
 def grid_search_weight_and_angle(shared_config: dict, sim=sim_single_bottle):
