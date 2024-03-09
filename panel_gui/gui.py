@@ -4,32 +4,36 @@ if not __name__.startswith("bokeh_app"):
 # add the root directory to the python path
 import sys
 from pathlib import Path
+
 from icecream import ic
+
 ic.disable()
 
 parent_dir = Path(".").parent.absolute()
 sys.path.append(str(parent_dir))
 
 import panel as pn
+
+from panel_gui.plotting import plot_multiple_traces, plot_single_trace
 from panel_gui.simulation_templates import SimulatorTemplate, get_simulators
-from panel_gui.plotting import plot_single_trace, plot_multiple_traces
 from rocket import load_traces
 
-pn.extension("plotly") #type: ignore
-pn.extension("jsoneditor") #type: ignore
+pn.extension("plotly")  # type: ignore
+pn.extension("jsoneditor")  # type: ignore
 
 simulation_results = []
 
+# TODO: allow saving and loading of simulations
 # simulation_results.append(("from video",load_traces("traces_from_final.mp4.json")))
-simulation_results.append(("from video",load_traces("calibrate/smoothed.json")))
 
 simulation_display = pn.pane.Plotly(sizing_mode="stretch_both")
-error_display = pn.pane.Alert("Ready",alert_type = "success")
+error_display = pn.pane.Alert("Ready", alert_type="success")
 
-description = pn.pane.Markdown("""
+description = pn.pane.Markdown(
+    """
 ## Bottle Rocket Simulator
 `TBD: add description of fields`
-For more accurate water simulation set bottle_shape to one of:
+You can play around with setting bottle_shape to one of:
 - `infinite` : similar to naive but uses different method
 - `simple` : assumes square bottle
 - `taper_45`: bottle has a 45 degree tapered end
@@ -37,7 +41,9 @@ For more accurate water simulation set bottle_shape to one of:
 
 NOTE: Its important to select a smaller timestep when using one of the above. 
 These shapes are only for simulating the flow of water inside the bottle and not drag.
-""")
+"""
+)
+
 
 def update_display():
     if len(simulation_results) == 1:
@@ -54,7 +60,7 @@ def update_display():
 
 
 def run_simulation(name, arguments, function):
-    try :
+    try:
         simulation_results.append((name, function(**arguments)))
     except Exception as e:
         error_display.alert_type = "danger"
@@ -75,10 +81,11 @@ def create_simulator_pane(simulator: SimulatorTemplate):
     return simulator.name, pane
 
 
-
 clear_simulations_button = pn.widgets.Button(name="clear")
-clear_simulations_button.on_click(lambda e:simulation_results.clear())
+clear_simulations_button.on_click(lambda e: simulation_results.clear())
 tabs = [tuple(create_simulator_pane(sim)) for sim in get_simulators()]
 tabs = pn.Tabs(*tabs)
-main_row = pn.Row(tabs, pn.Column(description,error_display,simulation_display,clear_simulations_button))
+main_row = pn.Row(
+    tabs, pn.Column(description, error_display, simulation_display, clear_simulations_button)
+)
 main_row.servable()

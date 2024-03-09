@@ -11,17 +11,17 @@ def create_scatter_plots_from_trace(name, trace: Traces):
     pos = go.Scatter(
         x=trace.position[:, 0],
         y=trace.position[:, 1],
-        hovertext = [f"{time:.2f}s" for time in trace.time],
+        hovertext=[f"{time:.2f}s" for time in trace.time],
         name=name + " position",
     )
-    spd = np.linalg.norm(trace.velocity, axis = 1,keepdims=True)
+    spd = np.linalg.norm(trace.velocity, axis=1, keepdims=True)
     speed = go.Scatter(
         x=trace.time,
-        y=spd[:,0],
+        y=spd[:, 0],
         name=name + " speed",
     )
     # direction_of_movement = trace.velocity/spd
-    magnitude_of_acceleration = np.linalg.norm(trace.acceleration, axis=1,keepdims=True)
+    magnitude_of_acceleration = np.linalg.norm(trace.acceleration, axis=1, keepdims=True)
     # direction_of_acceleration = trace.acceleration/magnitude_of_acceleration
     # forward_acceleration = np.array(magnitude_of_acceleration)
     # for i in range(len(direction_of_acceleration)):
@@ -30,7 +30,7 @@ def create_scatter_plots_from_trace(name, trace: Traces):
 
     acc = go.Scatter(
         x=trace.time,
-        y=magnitude_of_acceleration[:,0]/9.8,
+        y=magnitude_of_acceleration[:, 0] / 9.8,
         name=name + " acceleration",
     )
     return pos, speed, acc
@@ -77,9 +77,7 @@ def plot_multiple_traces(test_names: list[str], traces: list[Traces]) -> go.Figu
         scatters = create_scatter_plots_from_trace(name, trace)
         for i, scatter in enumerate(scatters):
             fig.add_trace(scatter, row=i + 1, col=1)
-            fig.data[-1].update(
-                marker=dict(color=px.colors.qualitative.Plotly[test_number])
-            )
+            fig.data[-1].update(marker=dict(color=px.colors.qualitative.Plotly[test_number]))
 
     fig.update_xaxes(title_text="Horizontal Distance (m)", row=1, col=1)
     fig.update_yaxes(title_text="Altitude (m)", row=1, col=1)
