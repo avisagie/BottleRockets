@@ -12,3 +12,6 @@ dependencies:
   - certifi
   - jupyterlab
   - black
+  - scipy
+  - icecream
+  - tabulate
