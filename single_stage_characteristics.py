@@ -1,5 +1,5 @@
 import itertools
-from concurrent.futures import Future, ThreadPoolExecutor, wait
+from concurrent.futures import Future, ProcessPoolExecutor, wait
 
 import numpy as np
 import pandas as pd
@@ -7,6 +7,18 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from rocket_architectures import plot_basic, sim_single_bottle
+
+
+def run_sims(sims_to_run: list[dict], sim=sim_single_bottle):
+    print(f"Starting {len(sims_to_run)} sims")
+    result_futures = []
+    with ProcessPoolExecutor(max_workers=16) as executor:
+        result_futures = [executor.submit(sim, **sim_conf) for sim_conf in sims_to_run]
+        wait(result_futures)
+        print("All futures have finished")
+
+    traces = [f.result() for f in result_futures]
+    return traces
 
 
 def pressure_characteristics(
@@ -117,14 +129,7 @@ def grid_search_weight_and_angle(shared_config: dict, sim=sim_single_bottle):
         )
         for a, m, w in angle_mass_wind_comb
     ]
-    print(f"Starting {len(sims_to_run)} sims")
-    result_futures = []
-    with ThreadPoolExecutor(max_workers=16) as executor:
-        result_futures = [executor.submit(sim, **sim_conf) for sim_conf in sims_to_run]
-        wait(result_futures)
-        print("All futures have finished")
-
-    traces = [f.result() for f in result_futures]
+    traces = run_sims(sims_to_run, sim)
     distances = [trace.position[-1][0] for trace in traces]
 
     angles, masses, winds = zip(*angle_mass_wind_comb)
@@ -164,7 +169,7 @@ def characterise_sprite_bottle():
         radius=0.052875,
         nozzle_radius=0.0105,
         launch_tube_length=0.25,
-        rail_length=3.0,
+        rail_length=2.0,
         extra_frontal_surface=0.000,
         timestep=0.0001,
         bottle_shape="naive",
@@ -176,14 +181,14 @@ def characterise_sprite_bottle():
     config = dict(**shared_sprite_config, theta=42, C_drag=0.12)
     # grid_search_weight(shared_config=config, sim=sim)
 
-    config = dict(**shared_sprite_config, dry_mass=0.18, C_drag=0.12)
-    # grid_search_angle(shared_config=config, sim=sim)
+    config = dict(**shared_sprite_config, dry_mass=0.195, C_drag=0.12)
+    grid_search_angle(shared_config=config, sim=sim)
 
     config = dict(**shared_sprite_config, dry_mass=0.18, theta=42)
     # grid_search_drag(shared_config=config, sim=sim)
 
     config = dict(**shared_sprite_config, C_drag=0.12)
-    grid_search_weight_and_angle(shared_config=config, sim=sim)
+    # grid_search_weight_and_angle(shared_config=config, sim=sim)
 
 
 def characterise_accuracy_rocket():
